@@ -1,1 +1,2 @@
-# gomat
+# Gossiper
+A gossip network
