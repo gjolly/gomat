@@ -5,7 +5,9 @@ import (
 )
 
 // Matrix represents a matrix using the conventional storage scheme.
-type Matrix mat.Dense
+type Matrix struct {
+	*mat.Dense
+}
 
 func min(x, y int) int {
 	if x < y {
@@ -14,14 +16,8 @@ func min(x, y int) int {
 	return y
 }
 
-func (m Matrix) Dims() (r, c int) {
-	md := mat.Dense(m)
-	r, c = md.Dims()
-	return
-}
-
+// Split the matrix m into i*j sub-matrices
 func (m Matrix) Split(i, j int) [][]Matrix {
-	md := mat.Dense(m)
 	r, c := m.Dims()
 	matrices := make([][]Matrix, i)
 	for k := range matrices {
@@ -31,25 +27,30 @@ func (m Matrix) Split(i, j int) [][]Matrix {
 		for l := range matrices[k] {
 			cMin := l * (c / i)
 			cMax := min((l+1)*(c/i), c)
-			matrices[k][l] = mat.DenseCopyOf(md.Slice(rMin, rMax, cMin, cMax))
+			matrices[k][l] = Matrix{mat.DenseCopyOf(m.Slice(rMin, rMax, cMin, cMax))}
 		}
 	}
+	return matrices
 }
 
-func (m Matrix) Add(a, b Matrix) {
-	md := mat.Dense(m)
-	ad := mat.Dense(a)
-	bd := mat.Dense(b)
-	md.Add(&ad, &bd)
-}
-
-func (m Matrix) Mul(a, b Matrix) {
-	md := mat.Dense(m)
-	ad := mat.Dense(a)
-	bd := mat.Dense(b)
-	md.Mul(&ad, &bd)
-}
-
-func (m Matrix) Diffusion(a Matrix) {
-
-}
+/*func (m Matrix) Diffusion(it int) Matrix {
+	r, c := m.Dims()
+	input := Matrix{mat.NewDense(r, c, make([]float64, r*c))}
+	input.Copy(&m)
+	output := Matrix{mat.NewDense(r, c, make([]float64, r*c))}
+	for t := 0; t < it; t++ {
+		for i := 1; i < c-1; i++ {
+			for j := 1; j < r-1; j++ {
+				cc := m.At(i-1, j-1) + m.At(i, j-1) + m.At(i+1, j-1)
+				cc += m.At(i-1, j) + m.At(i, j) + m.At(i+1, j)
+				cc += m.At(i-1, j+1) + m.At(i, j+1) + m.At(i+1, j+1)
+				output.Set(i, j, cc/9)
+			}
+		}
+		// Swap output and input
+		tmp := input
+		input = output
+		output = tmp
+	}
+	return input
+}*/
