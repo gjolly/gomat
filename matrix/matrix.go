@@ -1,6 +1,7 @@
 package matrix
 
 import (
+	"fmt"
 	"math"
 
 	"gonum.org/v1/gonum/mat"
@@ -112,3 +113,13 @@ func Merge(matrices [][]*Matrix) *Matrix {
 	}
 	return input
 }*/
+
+// ToString returns the string representation of the matrix.
+func (m *Matrix) ToString() string {
+	return fmt.Sprintf("%v", mat.Formatted(m, mat.Squeeze()))
+}
+
+// Equal returns whether the matrices a and b have the same size and are element-wise equal
+func Equal(m1, m2 *Matrix) bool {
+	return mat.Equal(m1, m2)
+}
