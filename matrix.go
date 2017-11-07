@@ -1,6 +1,8 @@
 package matrix
 
 import (
+	"math"
+
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -16,21 +18,77 @@ func min(x, y int) int {
 	return y
 }
 
-// Split the matrix m into i*j sub-matrices
-func (m Matrix) Split(i, j int) [][]Matrix {
+// New creates a new Matrix
+func New(r, c int, data []float64) *Matrix {
+	m := Matrix{mat.NewDense(r, c, data)}
+	return &m
+}
+
+// Split the matrix m into i*j sub-matrices (i sub-columns, j sub-rows)
+func (m *Matrix) Split(i, j int) [][]*Matrix {
 	r, c := m.Dims()
-	matrices := make([][]Matrix, i)
+	rSize := int(math.Ceil(float64(r) / float64(i)))
+	cSize := int(math.Ceil(float64(c) / float64(j)))
+	matrices := make([][]*Matrix, i)
 	for k := range matrices {
-		matrices[k] = make([]Matrix, j)
-		rMin := k * (r / i)
-		rMax := min((k+1)*(i/r), r)
+		matrices[k] = make([]*Matrix, j)
+		rMin := k * rSize
+		rMax := min((k+1)*rSize, r)
 		for l := range matrices[k] {
-			cMin := l * (c / i)
-			cMax := min((l+1)*(c/i), c)
-			matrices[k][l] = Matrix{mat.DenseCopyOf(m.Slice(rMin, rMax, cMin, cMax))}
+			cMin := l * cSize
+			cMax := min((l+1)*cSize, c)
+			matrices[k][l] = &Matrix{m.Slice(rMin, rMax, cMin, cMax).(*mat.Dense)}
 		}
 	}
 	return matrices
+}
+
+func mergedSize(matrices [][]*Matrix) (int, int) {
+	rM, cM := 0, 0
+	length := len(matrices[0])
+	for i := range matrices {
+		if len(matrices[i]) != length {
+			panic(mat.ErrShape)
+		}
+		r, c := 0, 0
+		for j := range matrices[i] {
+			rIJ, cIJ := matrices[i][j].Dims()
+			if (j != 0) && (r != rIJ) {
+				panic(mat.ErrShape)
+			}
+			r = rIJ
+			c += cIJ
+		}
+		if (i != 0) && (c != cM) {
+			panic(mat.ErrShape)
+		}
+		rM += r
+		cM = c
+	}
+	return rM, cM
+}
+
+// Merge i*j sub-matrices into one matrix
+func Merge(matrices [][]*Matrix) *Matrix {
+	rM, cM := mergedSize(matrices)
+
+	data := make([]float64, rM*cM)
+
+	pos := 0
+	for i := range matrices {
+		r, _ := matrices[i][0].Dims()
+		for k := 0; k < r; k++ {
+			for j := range matrices[i] {
+				_, c := matrices[i][j].Dims()
+				copy(data[pos:pos+c], matrices[i][j].RawRowView(k))
+				pos += c
+			}
+		}
+	}
+
+	m := New(rM, cM, data)
+
+	return m
 }
 
 /*func (m Matrix) Diffusion(it int) Matrix {
