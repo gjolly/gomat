@@ -196,6 +196,7 @@ func (g Gossiper) propagateRumorMessage(mess RumorMessage, excludedAddrs string)
 }
 
 func (g Gossiper) acceptStatusMessage(mess StatusMessage, addr *net.UDPAddr) {
+	g.AddPeer(*addr)
 	messToSend, isMessageToAsk := g.compareVectorClocks(mess.Want)
 	g.printDebugStatus(mess, *addr)
 
@@ -210,8 +211,6 @@ func (g Gossiper) acceptStatusMessage(mess StatusMessage, addr *net.UDPAddr) {
 		fmt.Println("IN SYNC WITH", addr.String())
 		g.exchangeEnded <- true
 	}
-
-	g.AddPeer(*addr)
 }
 
 func (g Gossiper) printPeerList() {
@@ -298,7 +297,7 @@ func (g *Gossiper) antiEntropy() {
 func (g Gossiper) compareVectorClocks(vectorClock []PeerStatus) (msgToSend *GossipMessage, isMessageToAsk bool) {
 	isMessageToAsk = false
 	msgToSend = nil
-	var find bool
+	find := true
 	for _, ps := range g.vectorClock {
 		find = false
 		for _, wanted := range vectorClock {
