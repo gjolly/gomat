@@ -3,7 +3,6 @@
 \usepackage[T1]{fontenc}
 \usepackage[british]{babel}
 \usepackage{hyperref}
-%\usepackage[margin=1in]{geometry}
 \usepackage{listings}
 \usepackage{xspace}
 \usepackage{graphicx}
@@ -32,7 +31,7 @@
     On the \texttt{GUI}, the client can change the maximum number of computations his computer can do at a time. He can see the number of computation his computer has done, check the peers he knows, see the ratio $r =$ number of computation tasks sent/{number of computation tasks computed}.
 
         \subsection{API}
-        Our API is a \Go package which is used to communicate with the daemon. When a user wants to compute an operation between to big matrices, he calls\\
+        Our API is a \Go package which is used to communicate with the daemon. A user that wants to compute an operation between to big matrices calls\\
     \texttt{Gomat.compute(matrix1, matrix2 Matrix, operation Gomat.Operation) (result Matrix, err error)}
 
         \subsection{Failure management}
