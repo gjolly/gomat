@@ -122,22 +122,20 @@ In that case, the ‘master’ peer must be informed of their computations, they
     \section{Evaluation Plan}
     First, we need to be sure, that the matrix splitting, merging, and the operations on them behave as they should.
 
-    When implementing them, we have proved that, mathematically, they should work. But we must still test them, and we will do that both locally, and, once it works, with a small network.
-    
-    [TODO TESTS UNITAIRES]
-    
+    To test the implementation of these operations, unit tests using the \texttt{testing} package available in golang will be written and launched after every change of any of the operations. Also, after being sure that they work locally, we will also test them within a small network.
+
     Since most of the tests will be run through the API, we must also check that when \texttt{Gomat.compute} is executed, the correct tasks are run in the background.
 
 ~~
-    
+
     Since the message spreading is built on top of Peerster, it should work and is already tested. Obviously, the messages sent for computations and failure detection are different from GossipPackets, but we will check if everything works when testing our parts of the program.
-    
+
 ~~
-    
+
     For the failure detection, we will have to check two things (and also adapt the timeout parameters accordingly): that if a peer fails, the other detect it fast, and that there a very few false positives (i.e. that a node is seen as having failed, while it still runs fine). We will simulate small networks, with failing nodes (i.e. deconnexions), and check the reactions of the remaining gossipers.
-    
+
     We will also check that when a node receives a message, it always adds the sender to its list of known peers, by sending blank messages (we must also be sure that a message not well formatted is discarded, instead of making the node thread crash).
-    
+
 ~~
 
     While all those tests will be running, we will have a GUI running, and we will check that all the informations displayed are correct.
