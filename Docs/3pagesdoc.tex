@@ -27,19 +27,19 @@
     \section{Goal and Functionalities}
         \subsection{Daemon}
     When a user wants to join a \Gomat network, it has to run the dedicated daemon. The daemon is the main component of the application. It splits and merges, executes computations and communicates with other peers. For this last point, it uses a \Gossiper network.
-        
+
         \subsubsection{GUI}
     On the \texttt{GUI}, the client can change the maximum number of computations his computer can do at a time. He can see the number of computation his computer has done, check the peers he knows, see the ratio $r =$ number of computation tasks sent/{number of computation tasks computed}.
-        
+
         \subsection{API}
         Our API is a \Go package which is used to communicate with the daemon. When a user wants to compute an operation between to big matrices, he calls\\
     \texttt{Gomat.compute(matrix1, matrix2 Matrix, operation Gomat.Operation) (result Matrix, err error)}
-        
-        \subsection{Failure management}    
+
+        \subsection{Failure management}
     Since it is a decentralised system where one peer delegates part of its job to others, it is essential to detect failures, manage them, and implement methods that make the system more resilient.
 
     It must be noted that failure detection and management work both ways. For a given computation, the gossiper that wants its job done must detect failing peers, so that it does not have to wait forever for their reply---and it should sent the dropped task to other peers for computations---, but ‘computing’ gossiper want to detect if the node that send them tasks fails, so that they can drop the job and reallocate their resources.
-    
+
     \section{Design and Architecture}
     \begin{figure}[!ht]
         \includegraphics[width=.95\textwidth]{global_view.pdf}
@@ -52,23 +52,27 @@
         \label{daemonView}
     \end{figure}
         \subsection{Daemon}
+        The creation of GoMatCore package and the demonstration application will be supervised by Kévin Carenou.
+
         A \Gomat peer is not a \Gossiper peer, but contains a \Gossiper peer that it uses to send and receive messages. Our \Gomat application uses the \Gossiper as a transport layer (layer 4).
-        
+
         \subsubsection{GUI}
         Once the daemon is running, it is not automatically connected to a \Gomat network. The user has to open a web browser and go on \url{http://localhost:8080} (can be modified in a configuration file) to add some peers to be connected on a
     \Gomat network.
-    
+
     \subsubsection{Split, merge and computation}
     When receiving a computation request from the API, the daemon will split the input matrices into smaller submatrices, to be sent to the network for computations.
 
     When a peer's deamon accept to compute a chunk of data, this deamon will do the computation using the \texttt{GoMatCore} package. This package implements functions computing the different operations.
 
     After receiving the results of the computations, the daemon merges the subresults into a result matrix.
-        
+
     \subsection{API}
-    Our API is a \Go package which is used to communicate with the daemon. When a user wants to compute an operation between to big matrices, he calls:\\
+    The API in charge of the communication between the application and the Daemon will be implemented by Gauthier Jolly.
+
+    Our API is a \Go package which is used to communicate with the daemon. When an application wants to compute an operation between to big matrices, he calls:\\
     \texttt{Gomat.compute(matrix1, matrix2 Matrix, operation Gomat.Operation)(result Matrix, err error)}
-    
+
 
     This function is blocking.
 
@@ -77,10 +81,10 @@
         \subsubsection{Communications between API and Daemon}
     The application using the API and the Daemon are running on the same computer. Thus, there is no need to use the network (i.e. the loopback interface).
     We use \texttt{Inter-Process Communication (IPC) sockets} to send information between the daemon and the API.
-        
+
         \subsection{Failure management}
-        Failure detection will be supervised by Matei Oltean.  
-        
+        Failure detection will be supervised by Matei Oltean.
+
         \subsubsection{Detecting failures}
     To manage failures, we first need to detect them.
 
@@ -114,7 +118,7 @@ In that case, the ‘master’ peer must be informed of their computations, they
     Then, if $g$ crashes, not all of the computations sent to him will have to be redone, since some subtasks are now processed by its peers.
 
     The master node will also be able to add gossipers to its list of known peers, and the network will be more robust.
-        
+
     \section{Evaluation Plan}
 
     \section{Conclusion}
