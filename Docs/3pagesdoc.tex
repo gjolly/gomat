@@ -7,6 +7,7 @@
 \usepackage{listings}
 \usepackage{xspace}
 \usepackage{graphicx}
+\usepackage{indentfirst}
 
 \title{Gomat specification}
 \author{Gauthier Jolly \and K\'{e}vin Car\'{e}nou \and Matei Oltean}
@@ -36,15 +37,12 @@
     \end{figure}
     
     \section{Daemon}
-    When a user wants to join a \Gomat network, it has to run the dedicated daemon. The daemon is the main component of the
-    application. It splits and merges matrices, executes the computations and communicates with other peers. For this last
-    point, it uses a \Gossiper network.   
-    
+    When a user wants to join a \Gomat network, it has to run the dedicated daemon. The daemon is the main component of the application. It splits and merges matrices, executes computations and communicates with other peers. For this last point, it uses a \Gossiper network.
+
     A \Gomat peer is not a \Gossiper peer, but contains a \Gossiper peer that it uses to send and receive messages. Our \Gomat application uses the \Gossiper as a transport layer (layer 4).
 
     \subsection{GUI}
-    Once the daemon is running, it is not automatically connected to a \Gomat network. The user has to open a web
-    browser and go on \url{http://localhost:8080} (can be modified in a configuration file) to add some peers to be connected on a
+    Once the daemon is running, it is not automatically connected to a \Gomat network. The user has to open a web browser and go on \url{http://localhost:8080} (can be modified in a configuration file) to add some peers to be connected on a
     \Gomat network.
     
     On the \texttt{GUI}, the client can change the maximum number of computations his computer can do at a time. He can see
@@ -52,30 +50,29 @@
     ($r =$ number of computation tasks sent/{number of computation tasks computed}).
 
     \section{API}
-    Our API is a \Go package which is use to speak with our daemon. When a user wants to compute an operation
-    between to big matrices, he calls:\\
+    Our API is a \Go package which is used to communicate with the daemon. When a user wants to compute an operation between to big matrices, he calls:\\
     \texttt{Gomat.compute(matrix1, matrix2 Matrix, operation Gomat.Operation)(result Matrix, err error)}\\
     This function is blocking.
 
     If there is no \Gomat daemon running on the computer, \texttt{Gomat.compute} returns an error.
+
     \subsection{Communications between API and Daemon}
-    The API and the Daemon are hosted on the same computer. Thus, there is no need to use the network (i.e. the loopback interface).
+    The application using the API and the Daemon are running on the same computer. Thus, there is no need to use the network (i.e. the loopback interface).
     We use \texttt{Inter-Process Communication (IPC) sockets} to send information between the daemon and the API.
-    
+
     \section{Failure detection and management}
     Since it is a decentralised system where one peer delegates part of its job to others, it is essential to detect failures, manage them, and implement methods that make the system more resilient.
 
     It must be noted that failure detection and management work both ways. For a given computation, the gossiper that wants its job done must detect failing peers, so that it does not have to wait forever for their reply, but ‘computing’ gossiper want to detect if the node that send them tasks fails, so that they can drop the job and reallocate their resources.
 
-
     \subsection{Detecting failures}
     To manage failures, we first need to detect them.
 
-    When \texttt{Gomat.compute} is used, the \Gomat daemon will first check that all of its peers are working. To that effect, it will send them a particular message and will wait will wait for an acknowledgement. If after some time, some will not reply, they will be considered to have failed, removed from the list of peers, and no task will be sent to them.
+    When \texttt{Gomat.compute} is used, the \Gomat daemon will first check that all of its peers are working. To that effect, it will send them a particular message and will wait for an acknowledgement. If after some time, some do not reply, they will be considered to have failed, will be removed from the list of peers, and no task will be sent to them.
 
 ~~
 
-    Whenever a ‘master’ gossiper splits a computation and sends it to peers for computing, it creates a routine for each contacted gossiper, that listens and writes to it. Each
+    Whenever a ‘master’ gossiper splits a computation and sends it to peers for computing, it creates a routine for each contacted gossiper, that listens and writes to it.
 When a gossiper receives the job, it acknowledges it by sending an answer to the master gossiper.
 Then, the master will send back a message to the gossiper, who will reply, and so one.
 
@@ -83,10 +80,10 @@ Then, the master will send back a message to the gossiper, who will reply, and s
 
 ~~
 
-    It must be noted that such a message coming from an unknown peer, it will be added to the list of potential peers.
+    It must be noted that such a message coming from an unknown peer is received, it will be added to the list of potential peers.
 
     \subsection{Failure management}
-    When a gossiper $g$ finds that another one, $a$, has failed, it will be removed from the list of peers, the routine created to communicate with $a$ will be killed, then one of the three will occur:
+    When a gossiper $g$ finds that another one, $a$, has failed, it will be removed from the list of peers, the routine created to communicate with $a$ will be killed and one of the three will occur:
 
 \begin{itemize}
 \item If $a$ was doing some computation for $g$, $g$ will split the computation between its remaining peers.
@@ -95,7 +92,6 @@ Then, the master will send back a message to the gossiper, who will reply, and s
 \end{itemize}
 
     \subsection{Making the system more resilient}
-    There is an idea of improvement, that will make the system more robust, and the network more tightly connected.
     If a gossiper $g$ receives a task and has enough idle peers, it can redistribute some of it amongst them. There must be some wait time (maybe they have all received subtasks from the same job, but because of delays, $g$ still sees them as idle).
 In that case, the ‘master’ peer must be informed of their computations, they will be added to its peers, and as for others, it must now detect their failures.
 
@@ -104,5 +100,7 @@ In that case, the ‘master’ peer must be informed of their computations, they
     The master node will also be able to add gossipers to its list of known peers, and the network will be more robust.
 
 \section{Conclusion}
+    These specifications are meant to change, since it is only a first draft.
+    
 
 \end{document}
