@@ -35,7 +35,7 @@
         \caption{Daemon architecture}
         \label{daemonView}
     \end{figure}
-    
+
     \section{Daemon}
     When a user wants to join a \Gomat network, it has to run the dedicated daemon. The daemon is the main component of the application. It splits and merges matrices, executes computations and communicates with other peers. For this last point, it uses a \Gossiper network.
 
@@ -44,17 +44,17 @@
     \subsection{GUI}
     Once the daemon is running, it is not automatically connected to a \Gomat network. The user has to open a web browser and go on \url{http://localhost:8080} (can be modified in a configuration file) to add some peers to be connected on a
     \Gomat network.
-    
+
     On the \texttt{GUI}, the client can change the maximum number of computations his computer can do at a time. He can see
     the number of computation his computer have done, check the peers he knows, see our ratio
     ($r =$ number of computation tasks sent/{number of computation tasks computed}).
-    
+
     \subsection{Split, merge and computation}
     When receiving a computation request from the API, the daemon will split the input matrices into smaller submatrices, to be sent to the network for computations.
 
-	The operations on matrices are implemented, because of the special behaviours linked to them.
+    When a peer's deamon accept to compute a chunk of data, this deamon will do the computation using the \texttt{GoMatCore} package. This package implements functions computing the differents operations.
 
-	After receiving the results of the computations, the daemon must be able to merge the subresults into a result matrix.
+    After receiving the results of the computations, the daemon merges the subresults into a result matrix.
 
     \section{API}
     Our API is a \Go package which is used to communicate with the daemon. When a user wants to compute an operation between to big matrices, he calls:\\
@@ -95,7 +95,7 @@ Then, the master will send back a message to the gossiper, who will reply, and s
 \begin{itemize}
 \item If $a$ was doing some computation for $g$, $g$ will split the computation between its remaining peers.
 \item If $g$ was doing some computation for $a$, $a$ will stop its computation.
-\item In any other case, nothing more will be done. 
+\item In any other case, nothing more will be done.
 \end{itemize}
 
     \subsection{Making the system more resilient}
