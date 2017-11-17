@@ -48,6 +48,13 @@
     On the \texttt{GUI}, the client can change the maximum number of computations his computer can do at a time. He can see
     the number of computation his computer have done, check the peers he knows, see our ratio
     ($r =$ number of computation tasks sent/{number of computation tasks computed}).
+    
+    \subsection{Split, merge and computation}
+    When receiving a computation request from the API, the daemon will split the input matrices into smaller submatrices, to be sent to the network for computations.
+
+	The operations on matrices are implemented, because of the special behaviours linked to them.
+
+	After receiving the results of the computations, the daemon must be able to merge the subresults into a result matrix.
 
     \section{API}
     Our API is a \Go package which is used to communicate with the daemon. When a user wants to compute an operation between to big matrices, he calls:\\
