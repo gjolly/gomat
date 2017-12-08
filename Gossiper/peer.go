@@ -4,10 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"strings"
-
-	"./tools"
-	"./tools/Messages"
-	"./GUI"
+	"github.com/gomat/Gossiper/tools"
+	"github.com/gomat/Gossiper/tools/Messages"
+	"github.com/gomat/Gossiper/GUI"
 )
 
 type Peer struct {
