@@ -21,16 +21,16 @@ var splitMergeTest = []struct {
 	split [][]*matrix.Matrix // expected result
 }{
 	{
-		createMatrix(5, 5), 2, 2, [][]*matrix.Matrix{
-		[]*matrix.Matrix{
-			matrix.New(3, 3, []float64{0, 1, 2, 5, 6, 7, 10, 11, 12}),
-			matrix.New(3, 2, []float64{3, 4, 8, 9, 13, 14}),
+		createMatrix(5, 3), 3, 2, [][]*matrix.Matrix{
+			[]*matrix.Matrix{
+				matrix.New(3, 2, []float64{0, 1, 3, 4, 6, 7}),
+				matrix.New(3, 1, []float64{2, 5, 8}),
+			},
+			[]*matrix.Matrix{
+				matrix.New(2, 2, []float64{9, 10, 12, 13}),
+				matrix.New(2, 1, []float64{11, 14}),
+			},
 		},
-		[]*matrix.Matrix{
-			matrix.New(2, 3, []float64{15, 16, 17, 20, 21, 22}),
-			matrix.New(2, 2, []float64{18, 19, 23, 24}),
-		},
-	},
 	},
 }
 

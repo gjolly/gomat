@@ -21,23 +21,22 @@ func min(x, y int) int {
 
 // New creates a new Matrix
 func New(r, c int, data []float64) *Matrix {
-	m := Matrix{mat.NewDense(r, c, data)}
-	return &m
+	return &Matrix{mat.NewDense(r, c, data)}
 }
 
-// Split the matrix m into i*j sub-matrices (i sub-columns, j sub-rows)
+// Split the matrix m into sub-matrices of max size (i, j)
 func (m *Matrix) Split(i, j int) [][]*Matrix {
 	r, c := m.Dims()
-	rSize := int(math.Ceil(float64(r) / float64(i)))
-	cSize := int(math.Ceil(float64(c) / float64(j)))
-	matrices := make([][]*Matrix, i)
+	nbRow := int(math.Ceil(float64(r) / float64(i)))
+	nbCol := int(math.Ceil(float64(c) / float64(j)))
+	matrices := make([][]*Matrix, nbRow)
 	for k := range matrices {
-		matrices[k] = make([]*Matrix, j)
-		rMin := k * rSize
-		rMax := min((k+1)*rSize, r)
+		matrices[k] = make([]*Matrix, nbCol)
+		rMin := k * i
+		rMax := min((k+1)*i, r)
 		for l := range matrices[k] {
-			cMin := l * cSize
-			cMax := min((l+1)*cSize, c)
+			cMin := l * j
+			cMax := min((l+1)*j, c)
 			matrices[k][l] = &Matrix{m.Slice(rMin, rMax, cMin, cMax).(*mat.Dense)}
 		}
 	}
