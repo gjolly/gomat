@@ -11,7 +11,7 @@ import (
 	"./Messages"
 )
 
-// Gossiper -- Discripe a node of a Gossip network
+// Gossiper -- Describe a node of a Gossip network
 type Gossiper struct {
 	UIAddr           *net.UnixAddr
 	gossipAddr       *net.UDPAddr
@@ -21,7 +21,7 @@ type Gossiper struct {
 	peers            map[string]Peer
 	vectorClock      []Messages.PeerStatus
 	idMessage        uint32
-	MessagesReceived map[string] map[uint32]Messages.RumorMessage
+	MessagesReceived map[string]map[uint32]Messages.RumorMessage
 	exchangeEnded    chan bool
 	RoutingTable     RoutingTable
 	mutex            *sync.Mutex
@@ -29,7 +29,7 @@ type Gossiper struct {
 	PrivateMessages  []Messages.RumorMessage
 }
 
-// NewGossiper -- Return a new gossiper structure
+// NewGossiper -- Returns a new gossiper structure
 func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rtimer uint) (*Gossiper, error) {
 	// For UIPort
 	UIAddr, err := net.ResolveUnixAddr("unix", sockFile)
@@ -59,7 +59,7 @@ func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rt
 		peers:            make(map[string]Peer, 0),
 		vectorClock:      make([]Messages.PeerStatus, 0),
 		idMessage:        1,
-		MessagesReceived: make(map[string](map[uint32]Messages.RumorMessage), 0),
+		MessagesReceived: make(map[string]map[uint32]Messages.RumorMessage, 0),
 		exchangeEnded:    make(chan bool),
 		RoutingTable:     *newRoutingTable(),
 		mutex:            &sync.Mutex{},
@@ -101,7 +101,7 @@ func (g Gossiper) getRandomPeer(excludedAddrs string) *Peer {
 	return &peer
 }
 
-// AddPeer -- Add a new peer to the list of peers. If Peer is already known: do nothing
+// AddPeer -- Adds a new peer to the list of peers. If Peer is already known: do nothing
 func (g *Gossiper) AddPeer(address net.UDPAddr) {
 	IPAddress := address.String()
 	_, okAddr := g.peers[IPAddress]
