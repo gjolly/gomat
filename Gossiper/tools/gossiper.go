@@ -21,7 +21,7 @@ type Gossiper struct {
 	peers            map[string]Peer
 	vectorClock      []Messages.PeerStatus
 	idMessage        uint32
-	MessagesReceived map[string](map[uint32]Messages.RumorMessage)
+	MessagesReceived map[string] map[uint32]Messages.RumorMessage
 	exchangeEnded    chan bool
 	RoutingTable     RoutingTable
 	mutex            *sync.Mutex
