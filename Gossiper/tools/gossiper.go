@@ -5,10 +5,10 @@ import (
 	"math/rand"
 	"net"
 	"time"
-
 	"github.com/dedis/protobuf"
 	"sync"
-	"./Messages"
+	"github.com/gomat/Gossiper/tools/Messages"
+	"github.com/gomat/Daemon/matrix"
 )
 
 // Gossiper -- Describe a node of a Gossip network
@@ -444,4 +444,8 @@ func (g *Gossiper) routeRumorDeamon() {
 
 func (g *Gossiper) sendRouteRumor() {
 	g.AcceptRumorMessage(genRouteRumor(), *g.gossipAddr, true)
+}
+
+func (f *Gossiper) splitComputation(mat matrix.Matrix, ) {
+
 }

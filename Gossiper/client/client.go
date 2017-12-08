@@ -4,9 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"net"
-
 	"github.com/dedis/protobuf"
-	"../tools/Messages"
+	"github.com/gomat/Gossiper/tools/Messages"
 )
 
 func main() {

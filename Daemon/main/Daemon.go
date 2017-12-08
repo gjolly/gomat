@@ -1,6 +1,6 @@
 package main
 
-import "../../Gossiper/tools"
+import "github.com/gomat/Gossiper/tools"
 
 type Daemon struct {
 	gossiper *tools.Gossiper

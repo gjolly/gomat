@@ -3,8 +3,7 @@ package matrix_test
 import (
 	"math/rand"
 	"testing"
-
-	"../matrix"
+	"github.com/gomat/Daemon/matrix"
 )
 
 func createMatrix(r, c int, fct func(int) float64) *matrix.Matrix {
@@ -23,15 +22,15 @@ var splitMergeTest = []struct {
 }{
 	{
 		createMatrix(5, 3, func(i int) float64 { return float64(i) }), 3, 2, [][]*matrix.Matrix{
-			[]*matrix.Matrix{
-				matrix.New(3, 2, []float64{0, 1, 3, 4, 6, 7}),
-				matrix.New(3, 1, []float64{2, 5, 8}),
-			},
-			[]*matrix.Matrix{
-				matrix.New(2, 2, []float64{9, 10, 12, 13}),
-				matrix.New(2, 1, []float64{11, 14}),
-			},
+		[]*matrix.Matrix{
+			matrix.New(3, 2, []float64{0, 1, 3, 4, 6, 7}),
+			matrix.New(3, 1, []float64{2, 5, 8}),
 		},
+		[]*matrix.Matrix{
+			matrix.New(2, 2, []float64{9, 10, 12, 13}),
+			matrix.New(2, 1, []float64{11, 14}),
+		},
+	},
 	},
 }
 
