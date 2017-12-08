@@ -1,7 +1,6 @@
 package matrix_test
 
 import (
-	"fmt"
 	"math/rand"
 	"testing"
 
@@ -102,31 +101,23 @@ func TestMul(t *testing.T) {
 }
 
 func TestSplitMultAddMerge(t *testing.T) {
-	m1 := createMatrix(3, 5, func(i int) float64 { return float64(10 * rand.Int()) })
-	m2 := createMatrix(5, 3, func(i int) float64 { return float64(10 * rand.Int()) })
+	m1 := createMatrix(30, 50, func(i int) float64 { return float64(rand.Intn(10)) })
+	m2 := createMatrix(50, 30, func(i int) float64 { return float64(rand.Intn(10)) })
 
-	sm1 := m1.Split(2, 2)
-	sm2 := m2.Split(2, 2)
-	subMul := make([][]*matrix.Matrix, len(sm1))
-	for i, _ := range sm1 {
-		subMul[i] = make([]*matrix.Matrix, len(sm2))
-		for j, _ := range sm1 {
+	sm1 := m1.Split(20, 20)
+	sm2 := m2.Split(20, 20)
+	sizeOutput := len(sm1)
+	subMul := make([][]*matrix.Matrix, sizeOutput)
+	for i := range subMul {
+		subMul[i] = make([]*matrix.Matrix, sizeOutput)
+		for j := range subMul[i] {
 			r, _ := sm1[i][0].Dims()
 			_, c := sm2[0][j].Dims()
 			subMul[i][j] = createMatrix(r, c, func(i int) float64 { return 0 })
 			for k := range sm1[i] {
-				r1, c1 := sm1[i][k].Dims()
-				r2, c2 := sm2[k][j].Dims()
 				p := matrix.Mul(sm1[i][k], sm2[k][j])
-				r3, c3 := p.Dims()
-				fmt.Printf("%d / %d / %d : (%d, %d) (%d, %d) -> (%d, %d)\n", i, j, k, r1, c1, r2, c2, r3, c3)
 				subMul[i][j] = matrix.Add(subMul[i][j], p)
 			}
-		}
-	}
-	for _, subm := range subMul {
-		for _, m := range subm {
-			fmt.Printf("%s\n", m.ToString())
 		}
 	}
 	mul := matrix.Merge(subMul)
