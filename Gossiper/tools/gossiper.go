@@ -13,10 +13,10 @@ import (
 
 // Gossiper -- Discripe a node of a Gossip network
 type Gossiper struct {
-	UIAddr           *(net.UDPAddr)
-	gossipAddr       *(net.UDPAddr)
-	UIConn           *(net.UDPConn)
-	gossipConn       *(net.UDPConn)
+	UIAddr           *net.UnixAddr
+	gossipAddr       *net.UDPAddr
+	UIListener       *net.UnixListener
+	gossipConn       *net.UDPConn
 	name             string
 	peers            map[string]Peer
 	vectorClock      []Messages.PeerStatus
@@ -30,13 +30,13 @@ type Gossiper struct {
 }
 
 // NewGossiper -- Return a new gossiper structure
-func NewGossiper(UIPort, gossipPort, identifier string, peerAddrs []string, rtimer uint) (*Gossiper, error) {
+func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rtimer uint) (*Gossiper, error) {
 	// For UIPort
-	UIUdpAddr, err := net.ResolveUDPAddr("udp4", ":"+UIPort)
+	UIAddr, err := net.ResolveUnixAddr("unix", sockFile)
 	if err != nil {
 		return nil, err
 	}
-	UIConn, err := net.ListenUDP("udp4", UIUdpAddr)
+	UIListener, err := net.ListenUnix("unix", UIAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -51,9 +51,9 @@ func NewGossiper(UIPort, gossipPort, identifier string, peerAddrs []string, rtim
 	}
 
 	g := &Gossiper{
-		UIAddr:           UIUdpAddr,
+		UIAddr:           UIAddr,
 		gossipAddr:       gossipUdpAddr,
-		UIConn:           UIConn,
+		UIListener:       UIListener,
 		gossipConn:       gossipConn,
 		name:             identifier,
 		peers:            make(map[string]Peer, 0),
@@ -142,24 +142,44 @@ func (g Gossiper) sendRumorToAllPeers(mess Messages.RumorMessage, excludeAddr *n
 	}
 }
 
-func (g *Gossiper) listenConn(conn *net.UDPConn, isFromClient bool) {
+func (g *Gossiper) listenConn(conn *net.UDPConn) {
 	var bufferMess []byte
 	var nbBytes int
 	var err error
 	var addr *net.UDPAddr
 	for {
-		bufferMess = make([]byte, 2048)
+		bufferMess = make([]byte, 8*2048)
 		nbBytes, addr, err = conn.ReadFromUDP(bufferMess)
 		if err == nil {
-			go g.accept(bufferMess, addr, nbBytes, isFromClient)
+			go g.accept(bufferMess, addr, nbBytes, false)
+		}
+	}
+}
+
+func (g *Gossiper) listenUnix(listener *net.UnixListener) {
+	for {
+		unixConn, _ := listener.AcceptUnix()
+		g.acceptUI(unixConn)
+	}
+}
+
+func (g *Gossiper) acceptUI(conn *net.UnixConn) {
+	var bufferMess []byte
+	var nbBytes int
+	var err error
+	for {
+		bufferMess = make([]byte, 8*2048)
+		nbBytes, _, err = conn.ReadFromUnix(bufferMess)
+		if err == nil {
+			go g.accept(bufferMess, nil, nbBytes, true)
 		}
 	}
 }
 
 // Run -- Launch the server
 func (g *Gossiper) Run() {
-	go g.listenConn(g.UIConn, true)
-	go g.listenConn(g.gossipConn, false)
+	go g.listenUnix(g.UIListener)
+	go g.listenConn(g.gossipConn)
 	go g.antiEntropy()
 	g.sendRouteRumor()
 	g.routeRumorDeamon()
@@ -173,13 +193,7 @@ func (g *Gossiper) accept(buffer []byte, addr *net.UDPAddr, nbByte int, isFromCl
 		g.AcceptRumorMessage(*mess.Rumor, *addr, isFromClient)
 	} else if mess.Status != nil {
 		g.acceptStatusMessage(*mess.Status, addr)
-	} else if mess.ShareFile != nil && isFromClient {
-		g.AcceptShareFile(*mess.ShareFile)
 	}
-}
-
-func (g *Gossiper) AcceptShareFile(mess Messages.ShareFile){
-
 }
 
 //Callback function, call when a message is received
