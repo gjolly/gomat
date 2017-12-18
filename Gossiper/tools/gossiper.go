@@ -18,7 +18,7 @@ type Gossiper struct {
 	UIListener       *net.UnixListener
 	gossipConn       *net.UDPConn
 	name             string
-	peers            map[string]Peer
+	peers            PeerMap
 	vectorClock      []Messages.PeerStatus
 	idMessage        uint32
 	MessagesReceived map[string]map[uint32]Messages.RumorMessage
@@ -56,7 +56,7 @@ func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rt
 		UIListener:       UIListener,
 		gossipConn:       gossipConn,
 		name:             identifier,
-		peers:            make(map[string]Peer, 0),
+		peers:            PeerMap{make(map[string]Peer), &sync.RWMutex{}},
 		vectorClock:      make([]Messages.PeerStatus, 0),
 		idMessage:        1,
 		MessagesReceived: make(map[string]map[uint32]Messages.RumorMessage, 0),
@@ -79,7 +79,11 @@ func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rt
 
 func (g Gossiper) excludeAddr(excludedAddrs string) (addrs []string) {
 	addrs = make([]string, 0)
-	for addrPeer := range g.peers {
+
+	g.peers.lock.Lock()
+	defer g.peers.lock.Unlock()
+
+	for addrPeer := range g.peers.Map {
 		if addrPeer != excludedAddrs {
 			addrs = append(addrs, addrPeer)
 		}
@@ -97,18 +101,18 @@ func (g Gossiper) getRandomPeer(excludedAddrs string) *Peer {
 
 	i := rand.Intn(len(availableAddrs))
 
-	peer := g.peers[availableAddrs[i]]
+	peer, _ := g.peers.Get(availableAddrs[i])
 	return &peer
 }
 
 // AddPeer -- Adds a new peer to the list of peers. If Peer is already known: do nothing
 func (g *Gossiper) AddPeer(address net.UDPAddr) {
 	IPAddress := address.String()
-	_, okAddr := g.peers[IPAddress]
+	g.peers.lock.Lock()
+	defer g.peers.lock.Unlock()
+	_, okAddr := g.peers.Map[IPAddress]
 	if !okAddr {
-		g.mutex.Lock()
-		g.peers[IPAddress] = newPeer(address)
-		g.mutex.Unlock()
+		g.peers.Map[IPAddress] = Peer{address}
 	}
 }
 
@@ -131,15 +135,6 @@ func (g Gossiper) sendStatusMessage(addr net.UDPAddr) error {
 	}
 	g.gossipConn.WriteToUDP(messEncode, &addr)
 	return nil
-}
-
-//send a message to all known peers excepted Peer
-func (g Gossiper) sendRumorToAllPeers(mess Messages.RumorMessage, excludeAddr *net.UDPAddr) {
-	for _, p := range g.peers {
-		if p.addr.String() != excludeAddr.String() {
-			g.sendRumorMessage(mess, p.addr)
-		}
-	}
 }
 
 func (g *Gossiper) listenConn(conn *net.UDPConn) {
@@ -299,7 +294,9 @@ func (g *Gossiper) acceptStatusMessage(mess Messages.StatusMessage, addr *net.UD
 
 func (g Gossiper) printPeerList() {
 	first := true
-	for _, peer := range g.peers {
+	g.peers.lock.RLock()
+	defer g.peers.lock.RUnlock()
+	for _, peer := range g.peers.Map {
 		if first {
 			first = false
 			fmt.Print(peer)
