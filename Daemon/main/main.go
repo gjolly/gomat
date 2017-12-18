@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/gomat/Gossiper/tools"
+	"github.com/matei13/gomat/Gossiper/tools"
 	"strings"
 )
 

@@ -3,7 +3,7 @@ package matrix_test
 import (
 	"math/rand"
 	"testing"
-	"github.com/gomat/Daemon/matrix"
+	"github.com/matei13/gomat/Daemon/matrix"
 )
 
 func createMatrix(r, c int, fct func(int) float64) *matrix.Matrix {

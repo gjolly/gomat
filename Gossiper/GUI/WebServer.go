@@ -7,8 +7,8 @@ import (
 	"io/ioutil"
 	"fmt"
 	"encoding/json"
-	"../tools"
-	"../tools/Messages"
+	"github.com/matei13/gomat/Gossiper/tools"
+	"github.com/matei13/gomat/Gossiper/tools/Messages"
 )
 
 type WebServer struct {

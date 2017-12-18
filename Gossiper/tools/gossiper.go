@@ -7,8 +7,8 @@ import (
 	"time"
 	"github.com/dedis/protobuf"
 	"sync"
-	"github.com/gomat/Gossiper/tools/Messages"
-	"github.com/gomat/Daemon/matrix"
+	"github.com/matei13/gomat/Gossiper/tools/Messages"
+	"github.com/matei13/gomat/Daemon/matrix"
 )
 
 // Gossiper -- Describe a node of a Gossip network

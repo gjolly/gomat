@@ -3,7 +3,6 @@ package Messages
 type GossipMessage struct {
 	Rumor    *RumorMessage
 	Status   *StatusMessage
-	ShareFile *ShareFile
 }
 
 func (g GossipMessage) String() string {
