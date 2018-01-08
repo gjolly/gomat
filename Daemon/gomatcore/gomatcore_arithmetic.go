@@ -1,12 +1,4 @@
-package matrix
-
-type Operation int
-
-const (
-	OpAdd Operation = 1 + iota
-	OpSub
-	OpMul
-)
+package gomatcore
 
 func Add(m1, m2 *Matrix) *Matrix {
 	r, c := m1.Dims()
