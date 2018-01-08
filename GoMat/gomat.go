@@ -9,6 +9,11 @@ type Matrix struct {
 	*mat.Dense
 }
 
+// New creates a new Matrix
+func New(r, c int, data []float64) *Matrix {
+	return &Matrix{mat.NewDense(r, c, data)}
+}
+
 // Add : Addition of two matrices
 func Add(m1, m2 *Matrix) *Matrix {
 	// TODO: Call deamon, wait for result and returns it
