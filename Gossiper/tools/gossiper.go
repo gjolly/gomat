@@ -9,6 +9,7 @@ import (
 	"sync"
 	"github.com/matei13/gomat/Gossiper/tools/Messages"
 	"github.com/matei13/gomat/Daemon/matrix"
+	"github.com/matei13/gomat/Gossiper/tools/Peers"
 )
 
 // Gossiper -- Describe a node of a Gossip network
@@ -18,8 +19,8 @@ type Gossiper struct {
 	UIListener       *net.UnixListener
 	gossipConn       *net.UDPConn
 	name             string
-	peers            PeerMap
-	vectorClock      []Messages.PeerStatus
+	peers            Peers.PeerMap
+	vectorClock      []Peers.PeerStatus
 	idMessage        uint32
 	MessagesReceived map[string]map[uint32]Messages.RumorMessage
 	exchangeEnded    chan bool
@@ -27,10 +28,17 @@ type Gossiper struct {
 	mutex            *sync.Mutex
 	rtimer           uint
 	PrivateMessages  []Messages.RumorMessage
+	MaxCapacity      uint64
 }
 
+const t1 = 2
+
+const t2 = 5
+
+const buffSize = 65507
+
 // NewGossiper -- Returns a new gossiper structure
-func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rtimer uint) (*Gossiper, error) {
+func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rtimer uint, capa uint64) (*Gossiper, error) {
 	// For UIPort
 	UIAddr, err := net.ResolveUnixAddr("unix", sockFile)
 	if err != nil {
@@ -56,14 +64,15 @@ func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rt
 		UIListener:       UIListener,
 		gossipConn:       gossipConn,
 		name:             identifier,
-		peers:            PeerMap{make(map[string]Peer), &sync.RWMutex{}},
-		vectorClock:      make([]Messages.PeerStatus, 0),
+		peers:            Peers.PeerMap{make(map[string]Peers.Peer), &sync.RWMutex{}},
+		vectorClock:      make([]Peers.PeerStatus, 0),
 		idMessage:        1,
 		MessagesReceived: make(map[string]map[uint32]Messages.RumorMessage, 0),
 		exchangeEnded:    make(chan bool),
 		RoutingTable:     *newRoutingTable(),
 		mutex:            &sync.Mutex{},
 		rtimer:           rtimer,
+		MaxCapacity:      capa,
 	}
 
 	for _, peerAddr := range peerAddrs {
@@ -79,10 +88,8 @@ func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rt
 
 func (g Gossiper) excludeAddr(excludedAddrs string) (addrs []string) {
 	addrs = make([]string, 0)
-
-	g.peers.lock.Lock()
-	defer g.peers.lock.Unlock()
-
+	g.peers.Lock.Lock()
+	defer g.peers.Lock.Unlock()
 	for addrPeer := range g.peers.Map {
 		if addrPeer != excludedAddrs {
 			addrs = append(addrs, addrPeer)
@@ -91,7 +98,7 @@ func (g Gossiper) excludeAddr(excludedAddrs string) (addrs []string) {
 	return
 }
 
-func (g Gossiper) getRandomPeer(excludedAddrs string) *Peer {
+func (g Gossiper) getRandomPeer(excludedAddrs string) *Peers.Peer {
 	availableAddrs := g.excludeAddr(excludedAddrs)
 	//fmt.Println(availableAddrs)
 
@@ -108,11 +115,11 @@ func (g Gossiper) getRandomPeer(excludedAddrs string) *Peer {
 // AddPeer -- Adds a new peer to the list of peers. If Peer is already known: do nothing
 func (g *Gossiper) AddPeer(address net.UDPAddr) {
 	IPAddress := address.String()
-	g.peers.lock.Lock()
-	defer g.peers.lock.Unlock()
+	g.peers.Lock.Lock()
+	defer g.peers.Lock.Unlock()
 	_, okAddr := g.peers.Map[IPAddress]
 	if !okAddr {
-		g.peers.Map[IPAddress] = Peer{address}
+		g.peers.Map[IPAddress] = Peers.Peer{Addr: address, Timer: 0}
 	}
 }
 
@@ -143,7 +150,7 @@ func (g *Gossiper) listenConn(conn *net.UDPConn) {
 	var err error
 	var addr *net.UDPAddr
 	for {
-		bufferMess = make([]byte, 8*2048)
+		bufferMess = make([]byte, buffSize)
 		nbBytes, addr, err = conn.ReadFromUDP(bufferMess)
 		if err == nil {
 			go g.accept(bufferMess, addr, nbBytes, false)
@@ -163,7 +170,7 @@ func (g *Gossiper) acceptUI(conn *net.UnixConn) {
 	var nbBytes int
 	var err error
 	for {
-		bufferMess = make([]byte, 8*2048)
+		bufferMess = make([]byte, buffSize)
 		nbBytes, _, err = conn.ReadFromUnix(bufferMess)
 		if err == nil {
 			go g.accept(bufferMess, nil, nbBytes, true)
@@ -177,13 +184,12 @@ func (g *Gossiper) Run() {
 	go g.listenConn(g.gossipConn)
 	go g.antiEntropy()
 	g.sendRouteRumor()
-	g.routeRumorDeamon()
+	g.routeRumorDaemon()
 }
 
 func (g *Gossiper) accept(buffer []byte, addr *net.UDPAddr, nbByte int, isFromClient bool) {
 	mess := &Messages.GossipMessage{}
 	protobuf.Decode(buffer, mess)
-
 	if mess.Rumor != nil {
 		g.AcceptRumorMessage(*mess.Rumor, *addr, isFromClient)
 	} else if mess.Status != nil {
@@ -261,14 +267,14 @@ func (g Gossiper) propagateRumorMessage(mess Messages.RumorMessage, excludedAddr
 
 	for coin == 1 && peer != nil {
 
-		fmt.Println("MONGERING with", peer.addr.String())
-		g.sendRumorMessage(mess, peer.addr)
+		fmt.Println("MONGERING with", peer.Addr.String())
+		g.sendRumorMessage(mess, peer.Addr)
 
 		peer = g.getRandomPeer("")
 		coin = rand.Int() % 2
 		//fmt.Println(coin, peer)
 		if coin == 1 && peer != nil {
-			fmt.Println("FLIPPED COIN sending rumor to", peer.addr.String())
+			fmt.Println("FLIPPED COIN sending rumor to", peer.Addr.String())
 		}
 	}
 }
@@ -294,8 +300,8 @@ func (g *Gossiper) acceptStatusMessage(mess Messages.StatusMessage, addr *net.UD
 
 func (g Gossiper) printPeerList() {
 	first := true
-	g.peers.lock.RLock()
-	defer g.peers.lock.RUnlock()
+	g.peers.Lock.RLock()
+	defer g.peers.Lock.RUnlock()
 	for _, peer := range g.peers.Map {
 		if first {
 			first = false
@@ -347,7 +353,7 @@ func (g *Gossiper) updateVectorClock(name string, id uint32) {
 	}
 	if !find && id == 1 {
 		g.mutex.Lock()
-		g.vectorClock = append(g.vectorClock, Messages.PeerStatus{Identifier: name, NextID: 2})
+		g.vectorClock = append(g.vectorClock, Peers.PeerStatus{Identifier: name, NextID: 2})
 		g.mutex.Unlock()
 		g.checkOnAlreadySeen(2, name)
 	}
@@ -374,12 +380,12 @@ func (g *Gossiper) antiEntropy() {
 		<-tick.C
 		peer := g.getRandomPeer("")
 		if peer != nil {
-			g.sendStatusMessage(peer.addr)
+			g.sendStatusMessage(peer.Addr)
 		}
 	}
 }
 
-func (g Gossiper) compareVectorClocks(vectorClock []Messages.PeerStatus) (isMessageToAsk bool, node string, id uint32) {
+func (g Gossiper) compareVectorClocks(vectorClock []Peers.PeerStatus) (isMessageToAsk bool, node string, id uint32) {
 	isMessageToAsk = false
 	find := true
 	node = ""
@@ -431,7 +437,7 @@ func genRouteRumor() (Messages.RumorMessage) {
 	return mess
 }
 
-func (g *Gossiper) routeRumorDeamon() {
+func (g *Gossiper) routeRumorDaemon() {
 	tick := time.NewTicker(time.Duration(g.rtimer) * time.Second)
 	for {
 		<-tick.C

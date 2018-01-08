@@ -3,6 +3,7 @@ package tools
 import (
 	"sync"
 	"github.com/matei13/gomat/Gossiper/tools/Messages"
+	"github.com/matei13/gomat/Gossiper/tools/Peers"
 )
 
 type MessageMap struct {
@@ -10,15 +11,15 @@ type MessageMap struct {
 	lock *sync.RWMutex
 }
 
-func (pm PeerMap) Set(k string, v Peer) {
-	pm.lock.Lock()
-	defer pm.lock.Unlock()
+func (pm Peers.PeerMap) Set(k string, v Peers.Peer) {
+	pm.Lock.Lock()
+	defer pm.Lock.Unlock()
 	pm.Map[k] = v
 }
 
-func (pm PeerMap) Get(k string) (Peer, bool) {
-	pm.lock.RLock()
-	defer pm.lock.RUnlock()
+func (pm Peers.PeerMap) Get(k string) (Peers.Peer, bool) {
+	pm.Lock.RLock()
+	defer pm.Lock.RUnlock()
 	v, ok := pm.Map[k]
 	return v, ok
 }

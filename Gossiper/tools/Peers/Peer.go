@@ -1,25 +1,27 @@
-package tools
+package Peers
 
 import (
 	"net"
 )
 
 type Peer struct {
-	addr net.UDPAddr
+	Addr 	net.UDPAddr
+	Timer 	int
 }
 
 func newPeer(addr net.UDPAddr) Peer {
 	return Peer{
-		addr: addr,
+		Addr: addr,
+		Timer: 0,
 	}
 }
 
 func (p Peer) String() string {
-	return p.addr.String()
+	return p.Addr.String()
 }
 
 func (p1 Peer) equals(p2 Peer) bool {
-	if p1.addr.String() == p2.addr.String() {
+	if p1.Addr.String() == p2.Addr.String() {
 		return true
 	} else {
 		return false

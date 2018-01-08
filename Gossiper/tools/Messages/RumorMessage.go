@@ -13,6 +13,7 @@ type RumorMessage struct {
 	Matrix2  matrix.Matrix
 	op       matrix.Operation
 	Dest     string
+	Text	 string
 	HopLimit uint32
 }
 
