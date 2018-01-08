@@ -8,7 +8,7 @@ import (
 	"github.com/dedis/protobuf"
 	"sync"
 	"github.com/matei13/gomat/Gossiper/tools/Messages"
-	"github.com/matei13/gomat/Daemon/matrix"
+	"github.com/matei13/gomat/Daemon/gomatcore"
 	"github.com/matei13/gomat/Gossiper/tools/Peers"
 )
 
@@ -28,17 +28,19 @@ type Gossiper struct {
 	mutex            *sync.Mutex
 	rtimer           uint
 	PrivateMessages  []Messages.RumorMessage
-	MaxCapacity      uint64
+	MaxCapacity      int
 }
 
 const t1 = 2
 
 const t2 = 5
 
+const timer = 30
+
 const buffSize = 65507
 
 // NewGossiper -- Returns a new gossiper structure
-func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rtimer uint, capa uint64) (*Gossiper, error) {
+func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rtimer uint, capa int) (*Gossiper, error) {
 	// For UIPort
 	UIAddr, err := net.ResolveUnixAddr("unix", sockFile)
 	if err != nil {
@@ -64,7 +66,7 @@ func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rt
 		UIListener:       UIListener,
 		gossipConn:       gossipConn,
 		name:             identifier,
-		peers:            Peers.PeerMap{make(map[string]Peers.Peer), &sync.RWMutex{}},
+		peers:            Peers.PeerMap{Map: make(map[string]Peers.Peer), Lock: &sync.RWMutex{}},
 		vectorClock:      make([]Peers.PeerStatus, 0),
 		idMessage:        1,
 		MessagesReceived: make(map[string]map[uint32]Messages.RumorMessage, 0),
@@ -121,6 +123,7 @@ func (g *Gossiper) AddPeer(address net.UDPAddr) {
 	if !okAddr {
 		g.peers.Map[IPAddress] = Peers.Peer{Addr: address, Timer: 0}
 	}
+	go g.listenGossiper(address)
 }
 
 func (g Gossiper) sendRumorMessage(message Messages.RumorMessage, addr net.UDPAddr) error {
@@ -449,6 +452,23 @@ func (g *Gossiper) sendRouteRumor() {
 	g.AcceptRumorMessage(genRouteRumor(), *g.gossipAddr, true)
 }
 
-func (f *Gossiper) splitComputation(mat matrix.Matrix, ) {
+func (g *Gossiper) splitComputation(mat1 gomatcore.Matrix, mat2 gomatcore.Matrix) {
+	d11, d12 := mat1.Dims()
+	d21, d22 := mat2.Dims()
+	if d11*d12 < g.MaxCapacity && d21*d22 < g.MaxCapacity {
 
+	}
+}
+
+func (g *Gossiper) listenGossiper(addr net.UDPAddr) {
+	tick := time.NewTicker(time.Duration(timer * time.Second))
+	IPAddress := addr.String()
+	for {
+		<-tick.C
+		g.sendStatusMessage(addr)
+		count := g.peers.Incr(IPAddress)
+		if count > t1 {
+
+		}
+	}
 }

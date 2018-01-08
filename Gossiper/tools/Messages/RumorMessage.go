@@ -1,7 +1,7 @@
 package Messages
 
 import (
-	"github.com/matei13/gomat/Daemon/matrix"
+	"github.com/matei13/gomat/Daemon/gomatcore"
 	"net"
 	"github.com/dedis/protobuf"
 )
@@ -9,9 +9,9 @@ import (
 type RumorMessage struct {
 	Origin   string
 	ID       uint32
-	Matrix1  matrix.Matrix
-	Matrix2  matrix.Matrix
-	op       matrix.Operation
+	Matrix1  gomatcore.Matrix
+	Matrix2  gomatcore.Matrix
+	op       gomatcore.Operation
 	Dest     string
 	Text	 string
 	HopLimit uint32

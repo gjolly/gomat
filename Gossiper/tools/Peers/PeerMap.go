@@ -20,18 +20,20 @@ func (pm PeerMap) Get(k string) (Peer, bool) {
 	return v, ok
 }
 
-func (pm PeerMap) Incr(k string) {
+func (pm PeerMap) Incr(k string) int {
 	pm.Lock.RLock()
 	defer pm.Lock.RUnlock()
 	_, ok := pm.Map[k]; if ok {
 		pm.Map[k].Timer++
 	}
+	return  pm.Map[k].Timer
 }
 
-func (pm PeerMap) Decr(k string) {
+func (pm PeerMap) Decr(k string) int {
 	pm.Lock.RLock()
 	defer pm.Lock.RUnlock()
 	_, ok := pm.Map[k]; if ok {
 		pm.Map[k].Timer--
 	}
+	return pm.Map[k].Timer
 }
