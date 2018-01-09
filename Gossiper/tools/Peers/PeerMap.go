@@ -25,7 +25,7 @@ func (pm PeerMap) Get(k string) (*Peer, bool) {
 func (pm PeerMap) Incr(k string) int {
 	pm.Lock.RLock()
 	defer pm.Lock.RUnlock()
-	_, ok := pm.Map[k];
+	_, ok := pm.Map[k]
 	if ok {
 		pm.Map[k].Timer++
 	}
@@ -35,15 +35,15 @@ func (pm PeerMap) Incr(k string) int {
 func (pm PeerMap) Decr(k string) int {
 	pm.Lock.RLock()
 	defer pm.Lock.RUnlock()
-	_, ok := pm.Map[k];
+	_, ok := pm.Map[k]
 	if ok {
 		pm.Map[k].Timer--
 	}
 	return pm.Map[k].Timer
 }
 
-func (pm PeerMap) available(thresh int) (peerList [] *Peer) {
-	peerList = make([] *Peer, 0)
+func (pm PeerMap) Available(thresh int) (peerList []*Peer) {
+	peerList = make([]*Peer, 0)
 	pm.Lock.RLock()
 	defer pm.Lock.RUnlock()
 	for _, b := range pm.Map {
