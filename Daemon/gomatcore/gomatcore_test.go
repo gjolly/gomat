@@ -1,6 +1,7 @@
 package gomatcore_test
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"testing"
@@ -101,7 +102,10 @@ func TestSplitMultAddMerge(t *testing.T) {
 	for _, ssm1 := range sm1 {
 		for _, ssm2 := range sm2 {
 			if ssm1.Col == ssm2.Row {
-				mul := matrix.MulMatrix(ssm1.Mat, ssm2.Mat)
+				r1, c1 := ssm1.Mat.Dims()
+				r2, c2 := ssm2.Mat.Dims()
+				fmt.Printf("%dx%d / %dx%d\n", r1, c1, r2, c2)
+				mul := matrix.Mul(ssm1.Mat, ssm2.Mat)
 				subMul[ssm1.Row*nbCol+ssm2.Col] = append(subMul[ssm1.Row*nbCol+ssm2.Col], &gomatcore.SubMatrix{
 					Mat: mul,
 					Row: ssm1.Row,
@@ -115,12 +119,12 @@ func TestSplitMultAddMerge(t *testing.T) {
 	for i := range subMul {
 		matrices[i] = subMul[i][0]
 		for k := 1; k < len(subMul[i]); k++ {
-			matrices[i].Mat = matrix.AddMatrix(matrices[i].Mat, subMul[i][k].Mat)
+			matrices[i].Mat = matrix.Add(matrices[i].Mat, subMul[i][k].Mat)
 		}
 	}
 	mul := gomatcore.Merge(matrices, r, c, 20)
 
-	res := matrix.MulMatrix(m1, m2)
+	res := matrix.Mul(m1, m2)
 	if !matrix.Equal(res, mul) {
 		t.Errorf("Mul: expected\n%v\n, actual \n%v\n", res.ToString(), mul.ToString())
 	}

@@ -4,7 +4,6 @@ import (
 	"math"
 
 	"github.com/matei13/gomat/matrix"
-	"gonum.org/v1/gonum/mat"
 )
 
 // SubMatrix represent a block of a matrix.
@@ -21,11 +20,6 @@ func min(x, y int) int {
 	return y
 }
 
-// New creates a new Matrix
-func New(r, c int, data []float64) *matrix.Matrix {
-	return &matrix.Matrix{mat.NewDense(r, c, data)}
-}
-
 // Split the matrix m into sub-matrices of max size (n, n)
 func Split(m *matrix.Matrix, n int) []*SubMatrix {
 	r, c := m.Dims()
@@ -39,7 +33,7 @@ func Split(m *matrix.Matrix, n int) []*SubMatrix {
 			cMin := j * n
 			cMax := min((j+1)*n, c)
 			matrices[i*nbCol+j] = &SubMatrix{
-				Mat: &matrix.Matrix{m.Slice(rMin, rMax, cMin, cMax).(*mat.Dense)},
+				Mat: m.Slice(rMin, rMax, cMin, cMax),
 				Row: i,
 				Col: j,
 			}

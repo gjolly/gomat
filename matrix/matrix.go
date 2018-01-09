@@ -47,11 +47,26 @@ func Sub(m1, m2 *Matrix) *Matrix {
 }
 
 func Mul(m1, m2 *Matrix) *Matrix {
-	r, c := m1.toDense().Dims()
+	r, _ := m1.toDense().Dims()
+	_, c := m2.toDense().Dims()
 	m := mat.NewDense(r, c, nil)
 	m.Mul(m1.toDense(), m2.toDense())
 	res := Matrix(*m)
 	return &res
+}
+
+func (m *Matrix) Dims() (int, int) {
+	r, c := m.toDense().Dims()
+	return r, c
+}
+
+func (m *Matrix) Slice(rMin, rMax, cMin, cMax int) *Matrix {
+	res := Matrix(*m.toDense().Slice(rMin, rMax, cMin, cMax).(*mat.Dense))
+	return &res
+}
+
+func (m *Matrix) RawRowView(i int) []float64 {
+	return m.toDense().RawRowView(i)
 }
 
 func MaxDim(m Matrix) int {
