@@ -5,13 +5,13 @@ import (
 )
 
 type Peer struct {
-	Addr 	net.UDPAddr
-	Timer 	int
+	Addr  net.UDPAddr
+	Timer int
 }
 
-func newPeer(addr net.UDPAddr) Peer {
+func NewPeer(addr net.UDPAddr) Peer {
 	return Peer{
-		Addr: addr,
+		Addr:  addr,
 		Timer: 0,
 	}
 }
