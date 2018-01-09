@@ -192,7 +192,6 @@ func (g *Gossiper) acceptUI(conn *net.UnixConn) {
 func (g *Gossiper) Run() {
 	go g.listenUnix(g.UIListener)
 	go g.listenConn(g.gossipConn)
-	go g.antiEntropy()
 	g.sendRouteRumour()
 	g.routeRumourDaemon()
 }
@@ -242,7 +241,6 @@ func (g *Gossiper) AcceptRumourMessage(mess Messages.RumourMessage, addr net.UDP
 			g.sendStatusMessage(addr)
 			g.AddPeer(addr)
 		}
-		g.propagateRumourMessage(mess, addr.String())
 	} else {
 		if mess.HopLimit > 1 && mess.Dest != g.name {
 			g.forward(mess)
@@ -265,24 +263,6 @@ func (g Gossiper) forward(message Messages.RumourMessage) {
 		if err == nil {
 			fmt.Println("FORWARD private msg", message.Dest, addr)
 			g.sendRumourMessage(message, *UDPAddr)
-		}
-	}
-}
-
-func (g Gossiper) propagateRumourMessage(mess Messages.RumourMessage, excludedAddrs string) {
-	coin := 1
-	peer := g.getRandomPeer(excludedAddrs)
-
-	for coin == 1 && peer != nil {
-
-		fmt.Println("MONGERING with", peer.Addr.String())
-		g.sendRumourMessage(mess, peer.Addr)
-
-		peer = g.getRandomPeer("")
-		coin = rand.Int() % 2
-		//fmt.Println(coin, peer)
-		if coin == 1 && peer != nil {
-			fmt.Println("FLIPPED COIN sending Rumour to", peer.Addr.String())
 		}
 	}
 }
@@ -332,17 +312,6 @@ func (g Gossiper) storeRumourMessage(mess Messages.RumourMessage, id uint32, nod
 	g.mutex.Unlock()
 }
 
-func (g *Gossiper) antiEntropy() {
-	tick := time.NewTicker(time.Minute)
-	for {
-		<-tick.C
-		peer := g.getRandomPeer("")
-		if peer != nil {
-			g.sendStatusMessage(peer.Addr)
-		}
-	}
-}
-
 func genRouteRumour() Messages.RumourMessage {
 	mess := Messages.RumourMessage{
 		Text: "",
@@ -377,8 +346,8 @@ func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operat
 					packet := Messages.RumourMessage{
 						Origin:  g.name,
 						ID:      id,
-						Matrix1: ssMat1,
-						Matrix2: ssMat2,
+						Matrix1: *ssMat1,
+						Matrix2: *ssMat2,
 						Op:      op,
 					}
 					g.sendRumourMessage(packet, randomPeer.Addr)
@@ -395,8 +364,8 @@ func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operat
 					packet := Messages.RumourMessage{
 						Origin:  g.name,
 						ID:      id,
-						Matrix1: ssMat1,
-						Matrix2: ssMat2,
+						Matrix1: *ssMat1,
+						Matrix2: *ssMat2,
 						Op:      op,
 					}
 					g.sendRumourMessage(packet, randomPeer.Addr)
@@ -407,7 +376,7 @@ func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operat
 	}
 }
 
-func (g *Gossiper) acceptComputation(task Tasks.Task, addr net.Addr, op Messages.Operation) bool {
+func (g *Gossiper) acceptComputation(task Tasks.Task, addr net.Addr) bool {
 	s := task.Size()
 	if g.CurrentCapacity >= s {
 		if _, ok := g.Pending[addr.String()]; !ok {
@@ -418,7 +387,7 @@ func (g *Gossiper) acceptComputation(task Tasks.Task, addr net.Addr, op Messages
 		select {
 		case <-l:
 			l = make(chan bool, 1)
-			go g.compute(task, op)
+			go g.compute(task)
 			g.CurrentCapacity -= s
 			return true
 		case time.After(5 * time.Second):
@@ -428,9 +397,9 @@ func (g *Gossiper) acceptComputation(task Tasks.Task, addr net.Addr, op Messages
 	return false
 }
 
-func (g *Gossiper) compute(task Tasks.Task, op Messages.Operation) {
+func (g *Gossiper) compute(task Tasks.Task) {
 	ansToSend := Messages.RumourMessage{ID: task.ID}
-	switch op {
+	switch task.Op {
 	case Messages.Sum:
 		ansToSend.Matrix1 = gomatcore.SubMatrix{Mat: matrix.Add(task.Mat1.Mat, task.Mat2.Mat), Row: task.Mat1.Row, Col: task.Mat2.Col}
 	case Messages.Mul:
@@ -461,8 +430,24 @@ func (g *Gossiper) listenGossiper(addr net.UDPAddr) {
 		if count > t1 {
 			l := g.Tasks.GetTasks(addr.String())
 			if l != nil && len(l) > 0 {
-				g.splitComputations(l)
+				g.splitComputationList(l)
+				l = make([]Tasks.Task, 0)
 			}
 		}
+	}
+}
+
+func (g *Gossiper) splitComputationList(tasks []Tasks.Task) {
+	available := g.peers.Available(t1)
+	for _, t := range tasks {
+		packet := Messages.RumourMessage{
+			Origin:  t.Origin.String(),
+			ID:      t.ID,
+			Matrix1: t.Mat1,
+			Matrix2: t.Mat2,
+			Op:      t.Op,
+		}
+		randomPeer := available[rand.Intn(len(available))]
+		g.sendRumourMessage(packet, randomPeer.Addr)
 	}
 }

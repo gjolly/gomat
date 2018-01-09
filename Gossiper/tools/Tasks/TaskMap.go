@@ -4,6 +4,7 @@ import (
 	"sync"
 	"github.com/matei13/gomat/Daemon/gomatcore"
 	"net"
+	"github.com/matei13/gomat/Gossiper/tools/Messages"
 )
 
 type TaskMap struct {
@@ -16,6 +17,7 @@ type Task struct {
 	Origin net.UDPAddr
 	Mat1   gomatcore.SubMatrix
 	Mat2   gomatcore.SubMatrix
+	Op     Messages.Operation
 }
 
 func (tm *TaskMap) GetTasks(p string) []Task {
