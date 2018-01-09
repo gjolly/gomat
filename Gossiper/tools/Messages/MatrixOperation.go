@@ -4,6 +4,6 @@ type Operation int
 
 const (
 	Sum Operation = iota
-	Subs = iota
+	Sub = iota
 	Mul = iota
 )

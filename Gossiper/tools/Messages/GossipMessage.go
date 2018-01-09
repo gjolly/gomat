@@ -1,7 +1,7 @@
 package Messages
 
 type GossipMessage struct {
-	Rumor    *RumorMessage
+	Rumor    *RumourMessage
 	Status   *StatusMessage
 }
 

@@ -58,9 +58,9 @@ func main() {
 }
 
 func (p *Peer) sendMsg(msg string) {
-	p.gossiper.AcceptRumorMessage(Messages.RumorMessage{Text:msg}, *p.webServer.Addr, true)
+	p.gossiper.AcceptRumorMessage(Messages.RumourMessage{Text:msg}, *p.webServer.Addr, true)
 }
 
 func (p *Peer) sendPrivateMsg(msg, dest string){
-	p.gossiper.AcceptRumorMessage(Messages.RumorMessage{Dest:dest, Text:msg}, *p.webServer.Addr, true)
+	p.gossiper.AcceptRumorMessage(Messages.RumourMessage{Dest:dest, Text:msg}, *p.webServer.Addr, true)
 }

@@ -6,6 +6,6 @@ import (
 )
 
 type MessageMap struct {
-	Map  map[string]map[string]map[uint32]Messages.RumorMessage
+	Map  map[string]map[string]map[uint32]Messages.RumourMessage
 	Lock *sync.RWMutex
 }

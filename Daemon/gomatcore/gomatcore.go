@@ -42,6 +42,10 @@ func Split(m *matrix.Matrix, n int) []*SubMatrix {
 	return matrices
 }
 
+func (m SubMatrix) MaxDim() int {
+	return m.Mat.MaxDim()
+}
+
 /*func mergedSize(matrices [][]*Matrix) (int, int) {
 	rM, cM := 0, 0
 	length := len(matrices[0])

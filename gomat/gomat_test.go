@@ -18,12 +18,12 @@ func daemon() {
 	requestBuf := make([]byte, 65507)
 
 	nb, _ := c.Read(requestBuf)
-	requestMess := Messages.RumorMessage{}
+	requestMess := Messages.RumourMessage{}
 	protobuf.Decode(requestBuf[0:nb], &requestMess)
 	log.Println(requestMess)
 
 	r := matrix.New(2, 2, []float64{3, 3, 3, 3})
-	responseMess := Messages.RumorMessage{"", 0, *r, *r, Messages.Sum, "", "", 0}
+	responseMess := Messages.RumourMessage{"", 0, *r, *r, Messages.Sum, "", "", 0}
 	responseBuf, _ := protobuf.Encode(&responseMess)
 
 	c.Write(responseBuf)

@@ -11,6 +11,7 @@ import (
 	"github.com/matei13/gomat/Gossiper/tools/Peers"
 	"github.com/matei13/gomat/Gossiper/tools/Tasks"
 	"github.com/matei13/gomat/matrix"
+	"github.com/matei13/gomat/Daemon/gomatcore"
 )
 
 // Gossiper -- Describe a node of a Gossip network
@@ -22,19 +23,18 @@ type Gossiper struct {
 	name             string
 	peers            Peers.PeerMap
 	idMessage        uint32
-	MessagesReceived map[string]map[uint32]Messages.RumorMessage
+	MessagesReceived map[string]map[uint32]Messages.RumourMessage
 	exchangeEnded    chan bool
 	RoutingTable     RoutingTable
 	mutex            *sync.Mutex
 	rtimer           uint
-	PrivateMessages  []Messages.RumorMessage
+	PrivateMessages  []Messages.RumourMessage
 	MaxCapacity      int
 	CurrentCapacity  int
-	Tasks            Tasks.TaskMap                //Tasks[p]: all tasks sent to k
-	Pending          map[string]map[int]chan bool //Pending[k][i]: for subtask i sent from k, waiting an acknowledgement to start
-	OwnTasks         map[int]string               // OwnTasks[i]: who handled subtask i
-	Finished         chan bool                    //is true when the current task is finished
-	TaskSize         int                          //number of chunks from the current task still being processed
+	Tasks            Tasks.TaskMap                   //Tasks[p]: all tasks sent to k
+	Pending          map[string]map[uint32]chan bool //Pending[k][i]: for subtask i sent from k, waiting an acknowledgement to start (true when it starts, false when it ends)
+	Finished         chan bool                       //is true when the current task is finished
+	TaskSize         int                             //number of chunks from the current task still being processed
 }
 
 const t1 = 2
@@ -72,7 +72,7 @@ func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rt
 		name:             identifier,
 		peers:            Peers.PeerMap{Map: make(map[string]*Peers.Peer), Lock: &sync.RWMutex{}},
 		idMessage:        1,
-		MessagesReceived: make(map[string]map[uint32]Messages.RumorMessage, 0),
+		MessagesReceived: make(map[string]map[uint32]Messages.RumourMessage, 0),
 		exchangeEnded:    make(chan bool),
 		RoutingTable:     *newRoutingTable(),
 		mutex:            &sync.Mutex{},
@@ -80,8 +80,7 @@ func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rt
 		MaxCapacity:      capa,
 		CurrentCapacity:  capa,
 		Tasks:            Tasks.TaskMap{Tasks: make(map[string][]Tasks.Task), Lock: &sync.RWMutex{}},
-		Pending:          make(map[string]map[int]chan bool),
-		OwnTasks:         make(map[int]string),
+		Pending:          make(map[string]map[uint32]chan bool),
 		Finished:         make(chan bool),
 	}
 
@@ -134,7 +133,7 @@ func (g *Gossiper) AddPeer(address net.UDPAddr) {
 	go g.listenGossiper(address)
 }
 
-func (g Gossiper) sendRumorMessage(message Messages.RumorMessage, addr net.UDPAddr) error {
+func (g Gossiper) sendRumourMessage(message Messages.RumourMessage, addr net.UDPAddr) error {
 	gossipMessage := Messages.GossipMessage{Rumor: &message}
 	messEncode, err := protobuf.Encode(&gossipMessage)
 	if err != nil {
@@ -209,7 +208,7 @@ func (g *Gossiper) accept(buffer []byte, addr *net.UDPAddr, nbByte int, isFromCl
 }
 
 //Callback function, call when a message is received
-func (g *Gossiper) AcceptRumorMessage(mess Messages.RumorMessage, addr net.UDPAddr, isFromClient bool) {
+func (g *Gossiper) AcceptRumorMessage(mess Messages.RumourMessage, addr net.UDPAddr, isFromClient bool) {
 
 	if !isFromClient && g.alreadySeen(mess.ID, mess.Origin) {
 		return
@@ -253,31 +252,31 @@ func (g *Gossiper) AcceptRumorMessage(mess Messages.RumorMessage, addr net.UDPAd
 	}
 }
 
-func (g *Gossiper) receivePrivateMessage(message Messages.RumorMessage) {
+func (g *Gossiper) receivePrivateMessage(message Messages.RumourMessage) {
 	fmt.Println("PRIVATE:", message.Origin+":"+fmt.Sprint(message.HopLimit)+":"+message.Text)
 	g.PrivateMessages = append(g.PrivateMessages, message)
 }
 
-func (g Gossiper) forward(message Messages.RumorMessage) {
+func (g Gossiper) forward(message Messages.RumourMessage) {
 	message.HopLimit -= 1
 	addr := g.RoutingTable.FindNextHop(message.Dest)
 	if addr != "" {
 		UDPAddr, err := net.ResolveUDPAddr("udp4", addr)
 		if err == nil {
 			fmt.Println("FORWARD private msg", message.Dest, addr)
-			g.sendRumorMessage(message, *UDPAddr)
+			g.sendRumourMessage(message, *UDPAddr)
 		}
 	}
 }
 
-func (g Gossiper) propagateRumorMessage(mess Messages.RumorMessage, excludedAddrs string) {
+func (g Gossiper) propagateRumorMessage(mess Messages.RumourMessage, excludedAddrs string) {
 	coin := 1
 	peer := g.getRandomPeer(excludedAddrs)
 
 	for coin == 1 && peer != nil {
 
 		fmt.Println("MONGERING with", peer.Addr.String())
-		g.sendRumorMessage(mess, peer.Addr)
+		g.sendRumourMessage(mess, peer.Addr)
 
 		peer = g.getRandomPeer("")
 		coin = rand.Int() % 2
@@ -290,7 +289,6 @@ func (g Gossiper) propagateRumorMessage(mess Messages.RumorMessage, excludedAddr
 
 func (g *Gossiper) acceptStatusMessage(mess Messages.StatusMessage, addr *net.UDPAddr) {
 	g.AddPeer(*addr)
-	g.printDebugStatus(mess, *addr)
 	g.peers.Decr(addr.String())
 }
 
@@ -309,16 +307,7 @@ func (g Gossiper) printPeerList() {
 	fmt.Println()
 }
 
-func (g Gossiper) printDebugStatus(mess Messages.StatusMessage, addr net.UDPAddr) {
-	fmt.Print("STATUS from ", addr.String())
-	for _, peerStatus := range mess.Want {
-		fmt.Print(" origin ", peerStatus.Identifier, " nextID ", peerStatus.NextID)
-	}
-	fmt.Println()
-	g.printPeerList()
-}
-
-func (g Gossiper) printDebugRumor(mess Messages.RumorMessage, lastHopIP string, isFromClient bool) {
+func (g Gossiper) printDebugRumor(mess Messages.RumourMessage, lastHopIP string, isFromClient bool) {
 	if isFromClient {
 		fmt.Println("CLIENT", mess, g.name)
 	} else {
@@ -334,10 +323,10 @@ func (g Gossiper) alreadySeen(id uint32, nodeName string) bool {
 	return ok
 }
 
-func (g Gossiper) storeRumorMessage(mess Messages.RumorMessage, id uint32, nodeName string) {
+func (g Gossiper) storeRumorMessage(mess Messages.RumourMessage, id uint32, nodeName string) {
 	g.mutex.Lock()
 	if g.MessagesReceived[nodeName] == nil {
-		g.MessagesReceived[nodeName] = make(map[uint32]Messages.RumorMessage)
+		g.MessagesReceived[nodeName] = make(map[uint32]Messages.RumourMessage)
 	}
 	g.MessagesReceived[nodeName][id] = mess
 	g.mutex.Unlock()
@@ -354,8 +343,8 @@ func (g *Gossiper) antiEntropy() {
 	}
 }
 
-func genRouteRumor() (Messages.RumorMessage) {
-	mess := Messages.RumorMessage{
+func genRouteRumor() (Messages.RumourMessage) {
+	mess := Messages.RumourMessage{
 		Text: "",
 	}
 	return mess
@@ -377,29 +366,48 @@ func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operat
 
 }
 
-func (g *Gossiper) splitComputations(tasks []Tasks.Task) {
-
-}
-
-func (g *Gossiper) acceptComputation(task Tasks.Task, addr net.Addr) bool {
+func (g *Gossiper) acceptComputation(task Tasks.Task, addr net.Addr, op Messages.Operation) bool {
 	s := task.Size()
 	if g.CurrentCapacity >= s {
 		if _, ok := g.Pending[addr.String()]; !ok {
-			g.Pending[addr.String()] = make(map[int]chan bool)
+			g.Pending[addr.String()] = make(map[uint32]chan bool)
 		}
 		l := make(chan bool, 1)
-		g.Pending[addr.String()][task.SubID] = l
+		g.Pending[addr.String()][task.ID] = l
 		select {
 		case <-l:
-			//TODO faire le calcul
+			l = make(chan bool, 1)
+			go g.compute(task, op)
 			g.CurrentCapacity -= s
-			g.Tasks.AddTask("", task)
 			return true
 		case time.After(5 * time.Second):
 			return false
 		}
 	}
 	return false
+}
+
+func (g *Gossiper) compute(task Tasks.Task, op Messages.Operation) {
+	ansToSend := Messages.RumourMessage{ID: task.ID}
+	switch op {
+	case Messages.Sum:
+		ansToSend.Matrix1 = gomatcore.SubMatrix{Mat: matrix.Add(task.Mat1.Mat, task.Mat2.Mat), Row: task.Mat1.Row, Col: task.Mat2.Col}
+	case Messages.Mul:
+		ansToSend.Matrix1 = gomatcore.SubMatrix{Mat: matrix.Sub(task.Mat1.Mat, task.Mat2.Mat), Row: task.Mat1.Row, Col: task.Mat2.Col}
+	case Messages.Sub:
+		ansToSend.Matrix1 = gomatcore.SubMatrix{Mat: matrix.Mul(task.Mat1.Mat, task.Mat2.Mat), Row: task.Mat1.Row, Col: task.Mat2.Col}
+	}
+	for {
+		go g.sendRumourMessage(ansToSend, task.Origin)
+		ticker := time.NewTicker(5 * time.Second)
+		l := g.Pending[task.Origin.String()][task.ID]
+		select {
+		case <-l:
+			return
+		case <-ticker.C:
+
+		}
+	}
 }
 
 func (g *Gossiper) listenGossiper(addr net.UDPAddr) {

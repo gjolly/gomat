@@ -69,7 +69,7 @@ func (m *Matrix) RawRowView(i int) []float64 {
 	return m.toDense().RawRowView(i)
 }
 
-func MaxDim(m Matrix) int {
+func (m Matrix) MaxDim() int {
 	x, y := m.toDense().Dims()
 	if x > y {
 		return x

@@ -24,7 +24,7 @@ func askForComputation(m1, m2 matrix.Matrix, operation Messages.Operation) (*mat
 	}
 
 	// Creating the message
-	rm := Messages.RumorMessage{"", 0, m1, m2, operation, "", "", 0}
+	rm := Messages.RumourMessage{"", 0, m1, m2, operation, "", "", 0}
 
 	// Encoding the message
 	rmEncode, err := protobuf.Encode(&rm)
@@ -49,7 +49,7 @@ func askForComputation(m1, m2 matrix.Matrix, operation Messages.Operation) (*mat
 	}
 
 	// Decoding the response
-	responseMessage := Messages.RumorMessage{}
+	responseMessage := Messages.RumourMessage{}
 	err = protobuf.Decode(response[0:nb], &responseMessage)
 	if err != nil {
 		log.Println(err)

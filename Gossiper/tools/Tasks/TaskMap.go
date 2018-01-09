@@ -3,6 +3,7 @@ package Tasks
 import (
 	"sync"
 	"github.com/matei13/gomat/Daemon/gomatcore"
+	"net"
 )
 
 type TaskMap struct {
@@ -11,11 +12,10 @@ type TaskMap struct {
 }
 
 type Task struct {
-	GlobalID int
-	SubID    int
-	Origin   string
-	Mat1     gomatcore.Matrix
-	Mat2     gomatcore.Matrix
+	ID     uint32
+	Origin net.UDPAddr
+	Mat1   gomatcore.SubMatrix
+	Mat2   gomatcore.SubMatrix
 }
 
 func (tm *TaskMap) GetTasks(p string) []Task {
@@ -33,12 +33,12 @@ func (tm *TaskMap) AddTask(peer string, t Task) {
 	tm.Tasks[peer] = append(tm.Tasks[peer], t)
 }
 
-func (tm *TaskMap) RemoveTask(peer string, id int) {
+func (tm *TaskMap) RemoveTask(peer string, id uint32) {
 	tm.Lock.Lock()
 	defer tm.Lock.Unlock()
 	if l, ok := tm.Tasks[peer]; ok {
 		for n, t := range l {
-			if t.SubID == id {
+			if t.ID == id {
 				l = append(l[:n], l[n+1:]...)
 				return
 			}

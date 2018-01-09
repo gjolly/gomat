@@ -7,7 +7,7 @@ import (
 )
 
 type StatusMessage struct {
-	Want []Peers.PeerStatus
+	ID uint32
 }
 
 func (sm StatusMessage) Send(conn *net.UDPConn, addr net.UDPAddr) error {
