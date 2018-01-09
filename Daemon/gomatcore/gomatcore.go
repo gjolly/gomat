@@ -1,15 +1,17 @@
 package gomatcore
 
 import (
-	"fmt"
 	"math"
 
+	"github.com/matei13/gomat/matrix"
 	"gonum.org/v1/gonum/mat"
 )
 
-// Matrix represents a matrix using the conventional storage scheme.
-type Matrix struct {
-	*mat.Dense
+// SubMatrix represent a block of a matrix.
+type SubMatrix struct {
+	Mat *matrix.Matrix // Block
+	Row int            // Row of the block in the original matrix
+	Col int            // Column of the block in the original matrix
 }
 
 func min(x, y int) int {
@@ -19,31 +21,29 @@ func min(x, y int) int {
 	return y
 }
 
-// New creates a new Matrix
-func New(r, c int, data []float64) *Matrix {
-	return &Matrix{mat.NewDense(r, c, data)}
-}
-
-// Split the matrix m into sub-matrices of max size (i, j)
-func (m *Matrix) Split(i, j int) [][]*Matrix {
+// Split the matrix m into sub-matrices of max size (n, n)
+func Split(m *matrix.Matrix, n int) []*SubMatrix {
 	r, c := m.Dims()
-	nbRow := int(math.Ceil(float64(r) / float64(i)))
-	nbCol := int(math.Ceil(float64(c) / float64(j)))
-	matrices := make([][]*Matrix, nbRow)
-	for k := range matrices {
-		matrices[k] = make([]*Matrix, nbCol)
-		rMin := k * i
-		rMax := min((k+1)*i, r)
-		for l := range matrices[k] {
-			cMin := l * j
-			cMax := min((l+1)*j, c)
-			matrices[k][l] = &Matrix{m.Slice(rMin, rMax, cMin, cMax).(*mat.Dense)}
+	nbRow := int(math.Ceil(float64(r) / float64(n)))
+	nbCol := int(math.Ceil(float64(c) / float64(n)))
+	matrices := make([]*SubMatrix, nbRow*nbCol)
+	for i := 0; i < nbRow; i++ {
+		rMin := i * n
+		rMax := min((i+1)*n, r)
+		for j := 0; j < nbCol; j++ {
+			cMin := j * n
+			cMax := min((j+1)*n, c)
+			matrices[i*nbCol+j] = &SubMatrix{
+				Mat: &matrix.Matrix{m.Slice(rMin, rMax, cMin, cMax).(*mat.Dense)},
+				Row: i,
+				Col: j,
+			}
 		}
 	}
 	return matrices
 }
 
-func mergedSize(matrices [][]*Matrix) (int, int) {
+/*func mergedSize(matrices [][]*Matrix) (int, int) {
 	rM, cM := 0, 0
 	length := len(matrices[0])
 	for i := range matrices {
@@ -66,59 +66,23 @@ func mergedSize(matrices [][]*Matrix) (int, int) {
 		cM = c
 	}
 	return rM, cM
-}
+}*/
 
 // Merge i*j sub-matrices into one matrix
-func Merge(matrices [][]*Matrix) *Matrix {
-	rM, cM := mergedSize(matrices)
+func Merge(matrices []*SubMatrix, rM, cM, n int) *matrix.Matrix {
+	//rM, cM := mergedSize(matrices)
 
 	data := make([]float64, rM*cM)
 
-	pos := 0
-	for i := range matrices {
-		r, _ := matrices[i][0].Dims()
+	for _, sm := range matrices {
+		r, c := sm.Mat.Dims()
 		for k := 0; k < r; k++ {
-			for j := range matrices[i] {
-				_, c := matrices[i][j].Dims()
-				copy(data[pos:pos+c], matrices[i][j].RawRowView(k))
-				pos += c
-			}
+			pos := (sm.Row*n+k)*cM + sm.Col*n
+			copy(data[pos:pos+c], sm.Mat.RawRowView(k))
 		}
 	}
 
-	m := New(rM, cM, data)
+	m := matrix.New(rM, cM, data)
 
 	return m
-}
-
-/*func (m Matrix) Diffusion(it int) Matrix {
-	r, c := m.Dims()
-	input := Matrix{mat.NewDense(r, c, make([]float64, r*c))}
-	input.Copy(&m)
-	output := Matrix{mat.NewDense(r, c, make([]float64, r*c))}
-	for t := 0; t < it; t++ {
-		for i := 1; i < c-1; i++ {
-			for j := 1; j < r-1; j++ {
-				cc := m.At(i-1, j-1) + m.At(i, j-1) + m.At(i+1, j-1)
-				cc += m.At(i-1, j) + m.At(i, j) + m.At(i+1, j)
-				cc += m.At(i-1, j+1) + m.At(i, j+1) + m.At(i+1, j+1)
-				output.Set(i, j, cc/9)
-			}
-		}
-		// Swap output and input
-		tmp := input
-		input = output
-		output = tmp
-	}
-	return input
-}*/
-
-// ToString returns the string representation of the matrix.
-func (m *Matrix) ToString() string {
-	return fmt.Sprintf("%v", mat.Formatted(m, mat.Squeeze()))
-}
-
-// Equal returns whether the matrices a and b have the same size and are element-wise equal
-func Equal(m1, m2 *Matrix) bool {
-	return mat.Equal(m1, m2)
 }
