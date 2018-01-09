@@ -31,7 +31,7 @@ type Gossiper struct {
 	PrivateMessages  []Messages.RumourMessage
 	MaxCapacity      int
 	CurrentCapacity  int
-	Tasks            Tasks.TaskMap                   //Tasks[p]: all tasks sent to k
+	Tasks            Tasks.TaskMap                   //Tasks[p]: all tasks sent to p
 	Pending          map[string]map[uint32]chan bool //Pending[k][i]: for subtask i sent from k, waiting an acknowledgement to start (true when it starts, false when it ends)
 	Finished         chan bool                       //is true when the current task is finished
 	TaskSize         int                             //number of chunks from the current task still being processed
