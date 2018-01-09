@@ -7,12 +7,13 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/matei13/gomat/Gossiper/tools/Peers"
+	"github.com/matei13/gomat/Gossiper/tools/Tasks"
 )
 
 type data struct {
-	Capacity int      `json:"capacity"`
-	Peers    []string `json:"peers"`
-	Tasks    []Tasks  `json:"tasks"`
+	Capacity int          `json:"capacity"`
+	Peers    []string     `json:"peers"`
+	Tasks    []Tasks.Task `json:"tasks"`
 }
 
 type capacity struct {
@@ -33,29 +34,31 @@ func jsonEncodeSend(w http.ResponseWriter, data interface{}) {
 
 func (g *Gossiper) getDataHandler(w http.ResponseWriter, r *http.Request) {
 	var peersList []string
-	peers := g.peers.Available()
-	for _, p := peers {
+	peers := g.peers.Available(t1)
+	for _, p := range peers {
 		peersList = append(peersList, p.String())
 	}
-	
+
 	jsonEncodeSend(w, data{
 		Capacity: g.MaxCapacity,
 		Peers:    peersList,
-		Tasks:    g.vectorClock.GetMessages(),
+		Tasks:    g.Tasks,
 	})
 }
 
 func (g *Gossiper) setCapacityHandler(w http.ResponseWriter, r *http.Request) {
 	var capacity capacity
 	json.NewDecoder(r.Body).Decode(&capacity)
-	g.MaxCapacity = int(capacity)
+	g.MaxCapacity = int(capacity.Capacity)
 }
 
 func (g *Gossiper) addPeerHandler(w http.ResponseWriter, r *http.Request) {
 	var peer peer
 	json.NewDecoder(r.Body).Decode(&peer)
-	addr, err := net.ResolveUDPAddr("udp4", string(peer))
-	g.peers = append(g.peers, Peers.NewPeer(addr))
+	addr, _ := net.ResolveUDPAddr("udp4", string(peer.Peer))
+	g.peers.Lock.Lock()
+	defer g.peers.Lock.Unlock()
+	g.peers.Map[addr.String()] = &Peers.Peer{Addr: *addr, Timer: 0}
 }
 
 func (g *Gossiper) runServer(port string) {
