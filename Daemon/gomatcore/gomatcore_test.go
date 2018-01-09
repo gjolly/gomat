@@ -1,7 +1,6 @@
 package gomatcore_test
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 	"testing"
@@ -102,9 +101,6 @@ func TestSplitMultAddMerge(t *testing.T) {
 	for _, ssm1 := range sm1 {
 		for _, ssm2 := range sm2 {
 			if ssm1.Col == ssm2.Row {
-				r1, c1 := ssm1.Mat.Dims()
-				r2, c2 := ssm2.Mat.Dims()
-				fmt.Printf("%dx%d / %dx%d\n", r1, c1, r2, c2)
 				mul := matrix.Mul(ssm1.Mat, ssm2.Mat)
 				subMul[ssm1.Row*nbCol+ssm2.Col] = append(subMul[ssm1.Row*nbCol+ssm2.Col], &gomatcore.SubMatrix{
 					Mat: mul,
