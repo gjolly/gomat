@@ -1,24 +1,14 @@
 package gomat
 
 import (
-	"gonum.org/v1/gonum/mat"
 	"net"
 	"log"
 	"github.com/matei13/gomat/Gossiper/tools/Messages"
 	"github.com/dedis/protobuf"
+	"github.com/matei13/gomat/matrix"
 )
 
-// Matrix represents a matrix using the conventional storage scheme.
-type Matrix struct {
-	*mat.Dense
-}
-
-// New creates a new Matrix
-func New(r, c int, data []float64) *Matrix {
-	return &Matrix{mat.NewDense(r, c, data)}
-}
-
-func askForComputation(m1, m2 Matrix, operation int) (*Matrix, error) {
+func askForComputation(m1, m2 matrix.Matrix, operation Messages.Operation) (*matrix.Matrix, error) {
 	//Resolving Unix addr to unix socket
 	unixAddr, err := net.ResolveUnixAddr("unix", "/tmp/gomat.sock")
 	if err != nil {
@@ -71,17 +61,17 @@ func askForComputation(m1, m2 Matrix, operation int) (*Matrix, error) {
 }
 
 // Add : Addition of two matrices
-func Add(m1, m2 Matrix) (*Matrix, error) {
+func Add(m1, m2 matrix.Matrix) (*matrix.Matrix, error) {
 	return askForComputation(m1, m2, Messages.Sum)
 }
 
 // Sub : Substruction of two matrices
-func Sub(m1, m2 Matrix) (*Matrix, error) {
-	return askForComputation(m1, m2, Messages.Sub)
+func Sub(m1, m2 matrix.Matrix) (*matrix.Matrix, error) {
+	return askForComputation(m1, m2, Messages.Subs)
 }
 
 // Mult : Multiplication of two matrices
-func Mult(m1, m2 *Matrix) *Matrix {
+func Mult(m1, m2 *matrix.Matrix) *matrix.Matrix {
 	// TODO: As above
 	return nil
 }

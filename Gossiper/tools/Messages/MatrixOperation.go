@@ -1,7 +1,9 @@
 package Messages
 
+type Operation int
+
 const (
-	Sum = iota
-	Sub = iota
+	Sum Operation = iota
+	Subs = iota
 	Mul = iota
 )
