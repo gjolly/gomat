@@ -4,6 +4,7 @@ import (
 	"net"
 	"github.com/dedis/protobuf"
 	"github.com/matei13/gomat/matrix"
+	"fmt"
 )
 
 type RumorMessage struct {
@@ -18,7 +19,7 @@ type RumorMessage struct {
 }
 
 func (m RumorMessage) String() string {
-	return "Rumor Message"
+	return fmt.Sprint(m.Matrix1) + " " + fmt.Sprint(m.Matrix2)
 }
 
 func (m RumorMessage) IsPrivate() bool {

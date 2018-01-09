@@ -6,9 +6,10 @@ import (
 	"github.com/matei13/gomat/Gossiper/tools/Messages"
 	"github.com/dedis/protobuf"
 	"github.com/matei13/gomat/matrix"
+	"fmt"
 )
 
-func askForComputation(m1, m2 matrix.Matrix, operation Messages.Operation) (*matrix.Matrix, error) {
+func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*matrix.Matrix, error) {
 	//Resolving Unix addr to unix socket
 	unixAddr, err := net.ResolveUnixAddr("unix", "/tmp/gomat.sock")
 	if err != nil {
@@ -24,7 +25,7 @@ func askForComputation(m1, m2 matrix.Matrix, operation Messages.Operation) (*mat
 	}
 
 	// Creating the message
-	rm := Messages.RumorMessage{"", 0, m1, m2, operation, "", "", 0}
+	rm := Messages.RumorMessage{"", 0, *m1, *m2, operation, "", "", 0}
 
 	// Encoding the message
 	rmEncode, err := protobuf.Encode(&rm)
@@ -32,6 +33,15 @@ func askForComputation(m1, m2 matrix.Matrix, operation Messages.Operation) (*mat
 		log.Println(err)
 		return nil, err
 	}
+
+	// Test protobuf
+	testM := Messages.RumorMessage{}
+	err = protobuf.Decode(rmEncode, &testM)
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Println("Request message: ", rm)
+	fmt.Println("Test Protobuf: ", testM)
 
 	// Sending the message to the gossiper
 	_, err = c.Write(rmEncode)
@@ -61,12 +71,12 @@ func askForComputation(m1, m2 matrix.Matrix, operation Messages.Operation) (*mat
 }
 
 // Add : Addition of two matrices
-func Add(m1, m2 matrix.Matrix) (*matrix.Matrix, error) {
+func Add(m1, m2 *matrix.Matrix) (*matrix.Matrix, error) {
 	return askForComputation(m1, m2, Messages.Sum)
 }
 
 // Sub : Substruction of two matrices
-func Sub(m1, m2 matrix.Matrix) (*matrix.Matrix, error) {
+func Sub(m1, m2 *matrix.Matrix) (*matrix.Matrix, error) {
 	return askForComputation(m1, m2, Messages.Subs)
 }
 
