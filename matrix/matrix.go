@@ -47,3 +47,11 @@ func Mul(m1, m2 *Matrix) *Matrix {
 	m.Mul(m1, m2)
 	return m
 }
+
+func (m Matrix) MaxDim() int {
+	x, y := m.Dims()
+	if x > y {
+		return x
+	}
+	return y
+}

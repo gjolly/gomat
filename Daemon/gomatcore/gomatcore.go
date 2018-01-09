@@ -21,14 +21,6 @@ func min(x, y int) int {
 	return y
 }
 
-func (m Matrix) MaxDim() int {
-	x, y := m.Dims()
-	if x > y {
-		return x
-	}
-	return y
-}
-
 // New creates a new Matrix
 func New(r, c int, data []float64) *Matrix {
 	return &Matrix{mat.NewDense(r, c, data)}
