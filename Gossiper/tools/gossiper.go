@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
-	"time"
-	"github.com/dedis/protobuf"
 	"sync"
+	"time"
+
+	"github.com/matei13/gomat/Daemon/gomatcore"
+
+	"github.com/dedis/protobuf"
 	"github.com/matei13/gomat/Gossiper/tools/Messages"
 	"github.com/matei13/gomat/Gossiper/tools/Peers"
 	"github.com/matei13/gomat/Gossiper/tools/Tasks"
@@ -343,8 +346,8 @@ func (g *Gossiper) antiEntropy() {
 	}
 }
 
-func genRouteRumor() (Messages.RumourMessage) {
-	mess := Messages.RumourMessage{
+func genRouteRumor() Messages.RumorMessage {
+	mess := Messages.RumorMessage{
 		Text: "",
 	}
 	return mess
@@ -363,7 +366,52 @@ func (g *Gossiper) sendRouteRumor() {
 }
 
 func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operation) {
+	sMat1 := gomatcore.Split(mat1, g.MaxCapacity/2)
+	sMat2 := gomatcore.Split(mat2, g.MaxCapacity/2)
+	id := 0
 
+	switch op {
+	case Messages.Sum, Messages.Sub:
+		for _, ssMat1 := range sMat1 {
+			for _, ssMat2 := range sMat2 {
+				if (ssMat1.Row == ssMat2.Row) && (ssMat1.Col == ssMat2.Col) {
+					peerAvailable := g.peers.Available(t1)
+					randomPeer := peerAvailable[rand.Int(len(peerAvailable))]
+					packet := Messages.GossipMessage{
+						Rumor: &Messages.RumorMessage{
+							Origin:  g.name,
+							ID:      id,
+							Matrix1: ssMat1,
+							Matrix2: ssMat2,
+							Op:      op,
+						},
+					}
+					g.sendRumorMessage(packet, randomPeer.Addr)
+					id++
+				}
+			}
+		}
+	case Messages.Mul:
+		for _, ssMat1 := range sMat1 {
+			for _, ssMat2 := range sMat2 {
+				if ssMat1.Row == ssMat2.Col {
+					peerAvailable := g.peers.Available(t1)
+					randomPeer := peerAvailable[rand.Int(len(peerAvailable))]
+					packet := Messages.GossipMessage{
+						Rumor: &Messages.RumorMessage{
+							Origin:  g.name,
+							ID:      id,
+							Matrix1: ssMat1,
+							Matrix2: ssMat2,
+							Op:      op,
+						},
+					}
+					g.sendRumorMessage(packet, randomPeer.Addr)
+					id++
+				}
+			}
+		}
+	}
 }
 
 func (g *Gossiper) acceptComputation(task Tasks.Task, addr net.Addr, op Messages.Operation) bool {
