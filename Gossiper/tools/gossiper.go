@@ -6,9 +6,6 @@ import (
 	"net"
 	"sync"
 	"time"
-
-	"github.com/matei13/gomat/Daemon/gomatcore"
-
 	"github.com/dedis/protobuf"
 	"github.com/matei13/gomat/Gossiper/tools/Messages"
 	"github.com/matei13/gomat/Gossiper/tools/Peers"
@@ -137,7 +134,7 @@ func (g *Gossiper) AddPeer(address net.UDPAddr) {
 }
 
 func (g Gossiper) sendRumourMessage(message Messages.RumourMessage, addr net.UDPAddr) error {
-	gossipMessage := Messages.GossipMessage{Rumor: &message}
+	gossipMessage := Messages.GossipMessage{Rumour: &message}
 	messEncode, err := protobuf.Encode(&gossipMessage)
 	if err != nil {
 		fmt.Println("error protobuf")
@@ -196,22 +193,22 @@ func (g *Gossiper) Run() {
 	go g.listenUnix(g.UIListener)
 	go g.listenConn(g.gossipConn)
 	go g.antiEntropy()
-	g.sendRouteRumor()
-	g.routeRumorDaemon()
+	g.sendRouteRumour()
+	g.routeRumourDaemon()
 }
 
 func (g *Gossiper) accept(buffer []byte, addr *net.UDPAddr, nbByte int, isFromClient bool) {
 	mess := &Messages.GossipMessage{}
 	protobuf.Decode(buffer, mess)
-	if mess.Rumor != nil {
-		g.AcceptRumorMessage(*mess.Rumor, *addr, isFromClient)
+	if mess.Rumour != nil {
+		g.AcceptRumourMessage(*mess.Rumour, *addr, isFromClient)
 	} else if mess.Status != nil {
 		g.acceptStatusMessage(*mess.Status, addr)
 	}
 }
 
 //Callback function, call when a message is received
-func (g *Gossiper) AcceptRumorMessage(mess Messages.RumourMessage, addr net.UDPAddr, isFromClient bool) {
+func (g *Gossiper) AcceptRumourMessage(mess Messages.RumourMessage, addr net.UDPAddr, isFromClient bool) {
 
 	if !isFromClient && g.alreadySeen(mess.ID, mess.Origin) {
 		return
@@ -235,17 +232,17 @@ func (g *Gossiper) AcceptRumorMessage(mess Messages.RumourMessage, addr net.UDPA
 	}
 
 	if mess.Text != "" {
-		g.printDebugRumor(mess, addr.String(), isFromClient)
+		g.printDebugRumour(mess, addr.String(), isFromClient)
 	}
 
 	if !mess.IsPrivate() {
-		g.storeRumorMessage(mess, mess.ID, mess.Origin)
+		g.storeRumourMessage(mess, mess.ID, mess.Origin)
 
 		if !isFromClient {
 			g.sendStatusMessage(addr)
 			g.AddPeer(addr)
 		}
-		g.propagateRumorMessage(mess, addr.String())
+		g.propagateRumourMessage(mess, addr.String())
 	} else {
 		if mess.HopLimit > 1 && mess.Dest != g.name {
 			g.forward(mess)
@@ -272,7 +269,7 @@ func (g Gossiper) forward(message Messages.RumourMessage) {
 	}
 }
 
-func (g Gossiper) propagateRumorMessage(mess Messages.RumourMessage, excludedAddrs string) {
+func (g Gossiper) propagateRumourMessage(mess Messages.RumourMessage, excludedAddrs string) {
 	coin := 1
 	peer := g.getRandomPeer(excludedAddrs)
 
@@ -285,7 +282,7 @@ func (g Gossiper) propagateRumorMessage(mess Messages.RumourMessage, excludedAdd
 		coin = rand.Int() % 2
 		//fmt.Println(coin, peer)
 		if coin == 1 && peer != nil {
-			fmt.Println("FLIPPED COIN sending rumor to", peer.Addr.String())
+			fmt.Println("FLIPPED COIN sending Rumour to", peer.Addr.String())
 		}
 	}
 }
@@ -310,11 +307,11 @@ func (g Gossiper) printPeerList() {
 	fmt.Println()
 }
 
-func (g Gossiper) printDebugRumor(mess Messages.RumourMessage, lastHopIP string, isFromClient bool) {
+func (g Gossiper) printDebugRumour(mess Messages.RumourMessage, lastHopIP string, isFromClient bool) {
 	if isFromClient {
 		fmt.Println("CLIENT", mess, g.name)
 	} else {
-		fmt.Println("RUMOR", "origin", mess.Origin, "from", lastHopIP, "ID", mess.ID, "contents", mess.Text)
+		fmt.Println("Rumour", "origin", mess.Origin, "from", lastHopIP, "ID", mess.ID, "contents", mess.Text)
 	}
 	g.printPeerList()
 }
@@ -326,7 +323,7 @@ func (g Gossiper) alreadySeen(id uint32, nodeName string) bool {
 	return ok
 }
 
-func (g Gossiper) storeRumorMessage(mess Messages.RumourMessage, id uint32, nodeName string) {
+func (g Gossiper) storeRumourMessage(mess Messages.RumourMessage, id uint32, nodeName string) {
 	g.mutex.Lock()
 	if g.MessagesReceived[nodeName] == nil {
 		g.MessagesReceived[nodeName] = make(map[uint32]Messages.RumourMessage)
@@ -346,29 +343,29 @@ func (g *Gossiper) antiEntropy() {
 	}
 }
 
-func genRouteRumor() Messages.RumorMessage {
-	mess := Messages.RumorMessage{
+func genRouteRumour() Messages.RumourMessage {
+	mess := Messages.RumourMessage{
 		Text: "",
 	}
 	return mess
 }
 
-func (g *Gossiper) routeRumorDaemon() {
+func (g *Gossiper) routeRumourDaemon() {
 	tick := time.NewTicker(time.Duration(g.rtimer) * time.Second)
 	for {
 		<-tick.C
-		g.sendRouteRumor()
+		g.sendRouteRumour()
 	}
 }
 
-func (g *Gossiper) sendRouteRumor() {
-	g.AcceptRumorMessage(genRouteRumor(), *g.gossipAddr, true)
+func (g *Gossiper) sendRouteRumour() {
+	g.AcceptRumourMessage(genRouteRumour(), *g.gossipAddr, true)
 }
 
 func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operation) {
-	sMat1 := gomatcore.Split(mat1, g.MaxCapacity/2)
-	sMat2 := gomatcore.Split(mat2, g.MaxCapacity/2)
-	id := 0
+	sMat1 := gomatcore.Split(&mat1, g.MaxCapacity/2)
+	sMat2 := gomatcore.Split(&mat2, g.MaxCapacity/2)
+	id := uint32(0)
 
 	switch op {
 	case Messages.Sum, Messages.Sub:
@@ -376,17 +373,15 @@ func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operat
 			for _, ssMat2 := range sMat2 {
 				if (ssMat1.Row == ssMat2.Row) && (ssMat1.Col == ssMat2.Col) {
 					peerAvailable := g.peers.Available(t1)
-					randomPeer := peerAvailable[rand.Int(len(peerAvailable))]
-					packet := Messages.GossipMessage{
-						Rumor: &Messages.RumorMessage{
-							Origin:  g.name,
-							ID:      id,
-							Matrix1: ssMat1,
-							Matrix2: ssMat2,
-							Op:      op,
-						},
+					randomPeer := peerAvailable[rand.Intn(len(peerAvailable))]
+					packet := Messages.RumourMessage{
+						Origin:  g.name,
+						ID:      id,
+						Matrix1: ssMat1,
+						Matrix2: ssMat2,
+						Op:      op,
 					}
-					g.sendRumorMessage(packet, randomPeer.Addr)
+					g.sendRumourMessage(packet, randomPeer.Addr)
 					id++
 				}
 			}
@@ -396,17 +391,15 @@ func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operat
 			for _, ssMat2 := range sMat2 {
 				if ssMat1.Row == ssMat2.Col {
 					peerAvailable := g.peers.Available(t1)
-					randomPeer := peerAvailable[rand.Int(len(peerAvailable))]
-					packet := Messages.GossipMessage{
-						Rumor: &Messages.RumorMessage{
-							Origin:  g.name,
-							ID:      id,
-							Matrix1: ssMat1,
-							Matrix2: ssMat2,
-							Op:      op,
-						},
+					randomPeer := peerAvailable[rand.Intn(len(peerAvailable))]
+					packet := Messages.RumourMessage{
+						Origin:  g.name,
+						ID:      id,
+						Matrix1: ssMat1,
+						Matrix2: ssMat2,
+						Op:      op,
 					}
-					g.sendRumorMessage(packet, randomPeer.Addr)
+					g.sendRumourMessage(packet, randomPeer.Addr)
 					id++
 				}
 			}

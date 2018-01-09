@@ -3,12 +3,8 @@ package Messages
 import (
 	"net"
 	"github.com/dedis/protobuf"
-<<<<<<< HEAD:Gossiper/tools/Messages/RumourMessage.go
 	"github.com/matei13/gomat/Daemon/gomatcore"
-=======
-	"github.com/matei13/gomat/matrix"
 	"fmt"
->>>>>>> master:Gossiper/tools/Messages/RumorMessage.go
 )
 
 type RumourMessage struct {
@@ -22,13 +18,8 @@ type RumourMessage struct {
 	HopLimit uint32
 }
 
-<<<<<<< HEAD:Gossiper/tools/Messages/RumourMessage.go
 func (m RumourMessage) String() string {
-	return "Rumor Message"
-=======
-func (m RumorMessage) String() string {
 	return fmt.Sprint(m.Matrix1) + " " + fmt.Sprint(m.Matrix2)
->>>>>>> master:Gossiper/tools/Messages/RumorMessage.go
 }
 
 func (m RumourMessage) IsPrivate() bool {

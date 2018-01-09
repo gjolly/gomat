@@ -1,14 +1,14 @@
 package Messages
 
 type GossipMessage struct {
-	Rumor    *RumourMessage
+	Rumour    *RumourMessage
 	Status   *StatusMessage
 }
 
 func (g GossipMessage) String() string {
 	var str string
-	if g.Rumor != nil {
-		str = "Rumor message: " + g.Rumor.String()
+	if g.Rumour != nil {
+		str = "Rumor message: " + g.Rumour.String()
 	} else if g.Status != nil {
 		str = "Status Message"
 	}
