@@ -21,8 +21,21 @@ func min(x, y int) int {
 	return y
 }
 
-// Split the matrix m into sub-matrices of max size (n, n)
-func Split(m *matrix.Matrix, n int) []*SubMatrix {
+func (m Matrix) MaxDim() int {
+	x, y := m.Dims()
+	if x > y {
+		return x
+	}
+	return y
+}
+
+// New creates a new Matrix
+func New(r, c int, data []float64) *Matrix {
+	return &Matrix{mat.NewDense(r, c, data)}
+}
+
+// Split the matrix m into sub-matrices of max size (i, j)
+func (m *Matrix) Split(i, j int) [][]*Matrix {
 	r, c := m.Dims()
 	nbRow := int(math.Ceil(float64(r) / float64(n)))
 	nbCol := int(math.Ceil(float64(c) / float64(n)))

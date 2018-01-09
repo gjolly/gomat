@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="ISO-8859-1">
+    <title>Homepage</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script>$(document).ready(function () {
+            $("#postCapa").click(function () {
+                $.post("/changeCapa", { value: $("#postCapa").val() });
+                $("#postCapa").val("");
+            });
+        });</script>
+    <script>$(document).ready(function () {
+            setInterval(function () {
+                $.get("/getData", function (data, status) {
+                    $("#capa").html(data['Used'] + '/' + data['Max']);
+                    $.each(data['Messages'], function (index, value) {
+                        $("#msg").append("<a>" + value + "<a><br />")
+                    });
+                    $("#peers").replaceWith('<div id="peers"> </div');
+                    $.each(data['Peers'], function (index, value) {
+                        $("#peers").append("<a>" + value + "<a><br />")
+                    });
+                });
+            }, 2000);
+        })</script>
+
+</head>
+
+<body>
+    <div>
+        <input id="changeCapa" type="text">
+        <button id="postCapa">Change maximum capacity</button>
+    </div>
+    <div>
+        <div style="border:1px solid black">
+            <h>Running tasks</h>
+            <br />
+            <div id="msg"></div>
+        </div>
+        <div style="border:1px solid black">
+            <h>Peers</h>
+            <div id="peers">
+            </div>
+        </div>
+        <div style="border:1px solid black">
+            <h>Capacity (used/max)</h>
+            <a id="capa"></a>
+        </div>
+    </div>
+    </div>
+</body>
+
+</html>

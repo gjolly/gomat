@@ -11,40 +11,44 @@ type TaskMap struct {
 }
 
 type Task struct {
-	ID     uint32
-	Origin string
-	Mat1   gomatcore.Matrix
-	Mat2   gomatcore.Matrix
+	GlobalID int
+	SubID    int
+	Origin   string
+	Mat1     gomatcore.Matrix
+	Mat2     gomatcore.Matrix
 }
 
-func (tm TaskMap) getTasks(p string) []Task {
+func (tm *TaskMap) GetTasks(p string) []Task {
 	tm.Lock.Lock()
 	defer tm.Lock.Unlock()
 	return tm.Tasks[p]
 }
 
-func (tm TaskMap) addTask(peer string, origin string, mat1 gomatcore.Matrix, mat2 gomatcore.Matrix, id uint32) {
+func (tm *TaskMap) AddTask(peer string, t Task) {
 	tm.Lock.Lock()
 	defer tm.Lock.Unlock()
 	if _, ok := tm.Tasks[peer]; !ok {
 		tm.Tasks[peer] = make([]Task, 1)
 	}
-	tm.Tasks[peer] = append(tm.Tasks[peer],
-		Task{ID: id,
-			Origin: origin,
-			Mat1: mat1,
-			Mat2: mat2,})
+	tm.Tasks[peer] = append(tm.Tasks[peer], t)
 }
 
-func (tm TaskMap) removeTask(peer string, id uint32) {
+func (tm *TaskMap) RemoveTask(peer string, id int) {
 	tm.Lock.Lock()
 	defer tm.Lock.Unlock()
 	if l, ok := tm.Tasks[peer]; ok {
 		for n, t := range l {
-			if t.ID == id {
+			if t.SubID == id {
 				l = append(l[:n], l[n+1:]...)
 				return
 			}
 		}
 	}
+}
+
+func (t Task) Size() int {
+	if t.Mat1.MaxDim() > t.Mat2.MaxDim() {
+		return t.Mat1.MaxDim()
+	}
+	return t.Mat2.MaxDim()
 }
