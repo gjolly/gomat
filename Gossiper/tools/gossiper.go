@@ -12,6 +12,7 @@ import (
 	"github.com/matei13/gomat/Gossiper/tools/Tasks"
 	"github.com/matei13/gomat/matrix"
 	"github.com/matei13/gomat/Daemon/gomatcore"
+	"github.com/matei13/gomat/Gossiper/tools/Pending"
 )
 
 // Gossiper -- Describe a node of a Gossip network
@@ -31,10 +32,10 @@ type Gossiper struct {
 	PrivateMessages  []Messages.RumourMessage
 	MaxCapacity      int
 	CurrentCapacity  int
-	Tasks            Tasks.TaskMap                   //Tasks[p]: all tasks sent to p
-	Pending          map[string]map[uint32]chan bool //Pending[k][i]: for subtask i sent from k, waiting an acknowledgement to start (true when it starts, false when it ends)
-	Finished         chan bool                       //is true when the current task is finished
-	TaskSize         int                             //number of chunks from the current task still being processed
+	Tasks            Tasks.TaskMap   //Tasks[p]: all tasks sent to p
+	Pending          Pending.Pending //Pending[k][i]: for subtask i sent from k, waiting an acknowledgement to start (true when it starts, false when it ends)
+	Finished         chan bool       //is true when the current task is finished
+	TaskSize         int             //number of chunks from the current task still being processed
 }
 
 const t1 = 2
@@ -80,7 +81,7 @@ func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rt
 		MaxCapacity:      capa,
 		CurrentCapacity:  capa,
 		Tasks:            Tasks.TaskMap{Tasks: make(map[string][]Tasks.Task), Lock: &sync.RWMutex{}},
-		Pending:          make(map[string]map[uint32]chan bool),
+		Pending:          Pending.Pending{Infos: make(map[string]map[uint32]Pending.Info), Lock: &sync.RWMutex{}},
 		Finished:         make(chan bool),
 	}
 
@@ -376,14 +377,10 @@ func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operat
 	}
 }
 
-func (g *Gossiper) acceptComputation(task Tasks.Task, addr net.Addr) bool {
+func (g *Gossiper) acceptComputation(task Tasks.Task) bool {
 	s := task.Size()
 	if g.CurrentCapacity >= s {
-		if _, ok := g.Pending[addr.String()]; !ok {
-			g.Pending[addr.String()] = make(map[uint32]chan bool)
-		}
-		l := make(chan bool, 1)
-		g.Pending[addr.String()][task.ID] = l
+		l := g.Pending.CreateChan(task)
 		select {
 		case <-l:
 			l = make(chan bool, 1)
@@ -410,7 +407,7 @@ func (g *Gossiper) compute(task Tasks.Task) {
 	for {
 		go g.sendRumourMessage(ansToSend, task.Origin)
 		ticker := time.NewTicker(5 * time.Second)
-		l := g.Pending[task.Origin.String()][task.ID]
+		l := g.Pending.GetChan(task.Origin.String(), task.ID)
 		select {
 		case <-l:
 			return
