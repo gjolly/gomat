@@ -8,9 +8,9 @@ import (
 	"github.com/dedis/protobuf"
 	"sync"
 	"github.com/matei13/gomat/Gossiper/tools/Messages"
-	"github.com/matei13/gomat/Daemon/gomatcore"
 	"github.com/matei13/gomat/Gossiper/tools/Peers"
 	"github.com/matei13/gomat/Gossiper/tools/Tasks"
+	"github.com/matei13/gomat/matrix"
 )
 
 // Gossiper -- Describe a node of a Gossip network
@@ -30,10 +30,11 @@ type Gossiper struct {
 	PrivateMessages  []Messages.RumorMessage
 	MaxCapacity      int
 	CurrentCapacity  int
-	Tasks            Tasks.TaskMap
-	Pending          map[string]map[int]chan bool
-	OwnTasks         map[int]map[int]string
-	TaskId           int
+	Tasks            Tasks.TaskMap                //Tasks[p]: all tasks sent to k
+	Pending          map[string]map[int]chan bool //Pending[k][i]: for subtask i sent from k, waiting an acknowledgement to start
+	OwnTasks         map[int]string               // OwnTasks[i]: who handled subtask i
+	Finished         chan bool                    //is true when the current task is finished
+	TaskSize         int                          //number of chunks from the current task still being processed
 }
 
 const t1 = 2
@@ -69,7 +70,7 @@ func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rt
 		UIListener:       UIListener,
 		gossipConn:       gossipConn,
 		name:             identifier,
-		peers:            Peers.PeerMap{Map: make(map[string] *Peers.Peer), Lock: &sync.RWMutex{}},
+		peers:            Peers.PeerMap{Map: make(map[string]*Peers.Peer), Lock: &sync.RWMutex{}},
 		idMessage:        1,
 		MessagesReceived: make(map[string]map[uint32]Messages.RumorMessage, 0),
 		exchangeEnded:    make(chan bool),
@@ -80,8 +81,8 @@ func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rt
 		CurrentCapacity:  capa,
 		Tasks:            Tasks.TaskMap{Tasks: make(map[string][]Tasks.Task), Lock: &sync.RWMutex{}},
 		Pending:          make(map[string]map[int]chan bool),
-		OwnTasks:         make(map[int]map[int]string),
-		TaskId:           0,
+		OwnTasks:         make(map[int]string),
+		Finished:         make(chan bool),
 	}
 
 	for _, peerAddr := range peerAddrs {
@@ -372,7 +373,7 @@ func (g *Gossiper) sendRouteRumor() {
 	g.AcceptRumorMessage(genRouteRumor(), *g.gossipAddr, true)
 }
 
-func (g *Gossiper) splitComputation(mat1 gomatcore.Matrix, mat2 gomatcore.Matrix) {
+func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operation) {
 
 }
 
