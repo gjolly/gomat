@@ -24,6 +24,7 @@ func main() {
 	rtimer := flag.Uint("rtimer", 60, "Delay during two routing message (Developer)")
 	guiAddr := flag.String("guiAddr", "none", "Enable GUI. Address of the GUI have to be " +
 		"precised: guiAddr:guiPort")
+	capacity := flag.Int("capacity", 5000, "Computing power of the gossiper")
 	flag.Parse()
 
 	// Avoid :0 of being a peers if no intial peers are specified
@@ -39,7 +40,7 @@ func main() {
 
 	// Creating a new gossiper
 	var err error
-	peer.gossiper, err = tools.NewGossiper(*UIPort, *gossipPort, *nodeName, peerAddrs, *rtimer)
+	peer.gossiper, err = tools.NewGossiper(*UIPort, *gossipPort, *nodeName, peerAddrs, *rtimer, *capacity)
 	if err != nil {
 		fmt.Println(err)
 		return

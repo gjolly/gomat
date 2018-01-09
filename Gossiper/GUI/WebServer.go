@@ -9,21 +9,21 @@ import (
 	"encoding/json"
 	"github.com/matei13/gomat/Gossiper/tools"
 	"github.com/matei13/gomat/Gossiper/tools/Messages"
+	"github.com/matei13/gomat/Gossiper/tools/Tasks"
 )
 
 type WebServer struct {
-	conn *net.UDPConn
-	Addr *net.UDPAddr
-
+	conn            *net.UDPConn
+	Addr            *net.UDPAddr
 	sendMsg         func(string)
 	sendPrivateMsg  func(string, string)
-	messages        *map[string](map[uint32]Messages.RumorMessage)
+	tasks           []Tasks.Task
 	privateMessages *[]Messages.RumorMessage
-	routingTable    *tools.RoutingTable
+	peers           []string
 }
 
 func NewWebServer(servAddr string, sendMsg func(string), sendPrivateMsg func(string, string),
-	messages *map[string](map[uint32]Messages.RumorMessage), privateMessages *[]Messages.RumorMessage, routingTable *tools.RoutingTable) (ws *WebServer) {
+	messages *map[string]map[uint32]Messages.RumorMessage, privateMessages *[]Messages.RumorMessage, routingTable *tools.RoutingTable) (ws *WebServer) {
 	addr, err := net.ResolveUDPAddr("udp4", servAddr)
 	if err != nil {
 		panic(err)
@@ -46,7 +46,7 @@ func (ws WebServer) Run() {
 }
 
 func (ws WebServer) sendPage(response http.ResponseWriter, request *http.Request) {
-	file, err := ioutil.ReadFile("../GUI/gui.html")
+	file, err := ioutil.ReadFile("../GUI/homepage.html")
 	if err != nil {
 		fmt.Println("WebServer: failed to open gui.html")
 	}
