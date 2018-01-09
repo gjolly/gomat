@@ -4,14 +4,15 @@ import (
 	"github.com/matei13/gomat/Daemon/gomatcore"
 	"net"
 	"github.com/dedis/protobuf"
+	"github.com/matei13/gomat/gomat"
 )
 
 type RumorMessage struct {
 	Origin   string
 	ID       uint32
-	Matrix1  gomatcore.Matrix
-	Matrix2  gomatcore.Matrix
-	op       gomatcore.Operation
+	Matrix1  gomat.Matrix
+	Matrix2  gomat.Matrix
+	op       int
 	Dest     string
 	Text	 string
 	HopLimit uint32
