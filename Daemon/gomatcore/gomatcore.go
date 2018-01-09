@@ -22,12 +22,12 @@ func min(x, y int) int {
 }
 
 // New creates a new Matrix
-func New(r, c int, data []float64) *Matrix {
-	return &Matrix{mat.NewDense(r, c, data)}
+func New(r, c int, data []float64) *matrix.Matrix {
+	return &matrix.Matrix{mat.NewDense(r, c, data)}
 }
 
-// Split the matrix m into sub-matrices of max size (i, j)
-func (m *Matrix) Split(i, j int) [][]*Matrix {
+// Split the matrix m into sub-matrices of max size (n, n)
+func Split(m *matrix.Matrix, n int) []*SubMatrix {
 	r, c := m.Dims()
 	nbRow := int(math.Ceil(float64(r) / float64(n)))
 	nbCol := int(math.Ceil(float64(c) / float64(n)))

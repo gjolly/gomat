@@ -26,21 +26,21 @@ func Equal(m1, m2 *Matrix) bool {
 	return mat.Equal(m1, m2)
 }
 
-func Add(m1, m2 *Matrix) *Matrix {
+func AddMatrix(m1, m2 *Matrix) *Matrix {
 	r, c := m1.Dims()
 	m := New(r, c, nil)
 	m.Add(m1, m2)
 	return m
 }
 
-func Sub(m1, m2 *Matrix) *Matrix {
+func SubMatrix(m1, m2 *Matrix) *Matrix {
 	r, c := m1.Dims()
 	m := New(r, c, nil)
 	m.Sub(m1, m2)
 	return m
 }
 
-func Mul(m1, m2 *Matrix) *Matrix {
+func MulMatrix(m1, m2 *Matrix) *Matrix {
 	r, _ := m1.Dims()
 	_, c := m2.Dims()
 	m := New(r, c, nil)
