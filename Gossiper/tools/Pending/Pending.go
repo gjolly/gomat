@@ -41,6 +41,18 @@ func (p *Pending) GetChan(s string, i uint32) chan bool {
 	return nil
 }
 
+func (p *Pending) GetChans(s string) (res []chan bool) {
+	p.Lock.Lock()
+	defer p.Lock.Unlock()
+	res = make([]chan bool, 0)
+	if l, ok := p.Infos[s]; ok {
+		for _, val := range l {
+			res = append(res, val.Chan)
+		}
+	}
+	return
+}
+
 func (p *Pending) CreateChan(t Tasks.Task) (l chan bool) {
 	p.Lock.Lock()
 	defer p.Lock.Unlock()
