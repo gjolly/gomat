@@ -2,3 +2,9 @@
 build/
 *.log
 out/
+
+*.doc
+*.aux
+*.out
+*.gz
+*.toc
