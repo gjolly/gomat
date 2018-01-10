@@ -7,5 +7,6 @@ type Daemon struct {
 }
 
 func (d *Daemon) Run() {
+	go d.gossiper.RunServer("80808")
 	d.gossiper.Run()
 }

@@ -85,3 +85,8 @@ func Sub(m1, m2 *matrix.Matrix) (*matrix.Matrix, error) {
 func Mult(m1, m2 *matrix.Matrix) (*matrix.Matrix, error) {
 	return askForComputation(m1, m2, Messages.Mul)
 }
+
+// New creates a new Matrix
+func New(r, c int, data []float64) *matrix.Matrix {
+	return matrix.New(r, c, data)
+}

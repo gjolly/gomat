@@ -26,7 +26,7 @@ func main() {
 	}
 
 	rmess := Messages.RumourMessage{Text: *msg, Dest: *dest}
-	mess := Messages.GossipMessage{Rumor: &rmess}
+	mess := Messages.GossipMessage{Rumour: &rmess}
 	buf, err := protobuf.Encode(&mess)
 
 	if err != nil {

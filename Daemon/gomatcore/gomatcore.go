@@ -46,31 +46,6 @@ func (m SubMatrix) MaxDim() int {
 	return m.Mat.MaxDim()
 }
 
-/*func mergedSize(matrices [][]*Matrix) (int, int) {
-	rM, cM := 0, 0
-	length := len(matrices[0])
-	for i := range matrices {
-		if len(matrices[i]) != length {
-			panic(mat.ErrShape)
-		}
-		r, c := 0, 0
-		for j := range matrices[i] {
-			rIJ, cIJ := matrices[i][j].Dims()
-			if (j != 0) && (r != rIJ) {
-				panic(mat.ErrShape)
-			}
-			r = rIJ
-			c += cIJ
-		}
-		if (i != 0) && (c != cM) {
-			panic(mat.ErrShape)
-		}
-		rM += r
-		cM = c
-	}
-	return rM, cM
-}*/
-
 // Merge i*j sub-matrices into one matrix
 func Merge(matrices []*SubMatrix, rM, cM, n int) *matrix.Matrix {
 	//rM, cM := mergedSize(matrices)

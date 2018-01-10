@@ -61,7 +61,7 @@ func (g *Gossiper) addPeerHandler(w http.ResponseWriter, r *http.Request) {
 	g.peers.Map[addr.String()] = &Peers.Peer{Addr: *addr, Timer: 0}
 }
 
-func (g *Gossiper) runServer(port string) {
+func (g *Gossiper) RunServer(port string) {
 	r := mux.NewRouter()
 	r.HandleFunc("/getData", g.getDataHandler)
 	r.HandleFunc("/setCapacity", g.setCapacityHandler)
