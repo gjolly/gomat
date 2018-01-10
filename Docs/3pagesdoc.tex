@@ -28,7 +28,12 @@
     When a user wants to join a \Gomat network, it has to run the dedicated daemon. The daemon is the main component of the application. It splits and merges, executes computations and communicates with other peers. For this last point, it uses a \Gossiper network.
 
         \subsubsection{GUI}
-    On the \texttt{GUI}, the client can change the maximum number of computations his computer can do at a time. He can see the number of computation his computer has done, check the peers he knows, see the ratio $r =$ number of computation tasks sent/{number of computation tasks computed}.
+        \begin{figure}[!ht]
+            \includegraphics[width=.95\textwidth]{gui.png}
+            \caption{Global view}
+            \label{glbView}
+        \end{figure}
+    On the \texttt{GUI}, the client can change the maximum computational power it brings to the network through the daemon. He can see the tasks he is currently computing, the source of the computation and the size of the computation, check the peers he knows and add some if needed.
 
         \subsection{API}
         Our API is a \Go package which is used to communicate with the daemon. A user that wants to compute an operation between to big matrices calls\\
@@ -58,15 +63,15 @@
         A \Gomat peer is not a \Gossiper peer, but contains a \Gossiper peer that it uses to send and receive messages. Our \Gomat application uses the \Gossiper as a transport layer (layer 4).
 
         \subsubsection{GUI}
-        Once the daemon is running, it is not automatically connected to a \Gomat network. The user has to open a web browser and go on \url{http://localhost:8080} (can be modified in a configuration file) to add some peers to be connected on a
+        Once the daemon is running, it is not automatically connected to a \Gomat network. The user has to open a web browser and go on \url{http://localhost:8088} (can be modified in a configuration file) to add some peers to be connected on a
     \Gomat network.
 
     \subsubsection{Split, merge and computation}
-    When receiving a computation request from the API, the daemon will split the input matrices into smaller submatrices, to be sent to the network for computations.
+    When receiving a computation request from the API, the daemon splits the input matrices into smaller submatrices, to be sent to the network for computations. This submatrices are identified by their position (row/column) as a block of the original/result matrix.
 
     When a peer's deamon accept to compute a chunk of data, this deamon will do the computation using the \texttt{GoMatCore} package. This package implements functions computing the different operations.
 
-    After receiving the results of the computations, the daemon merges the subresults into a result matrix.
+    After receiving the results of the computations, the daemon merges the subresults into a result matrix. Some operations such as multiplication needs several steps to compute. In the case of multiplication, we first need to compute the multiplication between submatrices and we get the results. Then we launch the addition of block to get the result matrix.
 
     \subsection{API}
     The API in charge of the communication between the application and the Daemon will be implemented by Gauthier Jolly.
