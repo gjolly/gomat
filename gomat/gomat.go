@@ -7,6 +7,7 @@ import (
 	"github.com/dedis/protobuf"
 	"github.com/matei13/gomat/matrix"
 	"fmt"
+	"github.com/matei13/gomat/Daemon/gomatcore"
 )
 
 func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*matrix.Matrix, error) {
@@ -25,7 +26,7 @@ func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*ma
 	}
 
 	// Creating the message
-	rm := Messages.RumourMessage{"", 0, m1, m2, operation, "", "", 0}
+	rm := Messages.RumourMessage{Matrix1: gomatcore.SubMatrix{Mat: m1}, Matrix2: gomatcore.SubMatrix{Mat: m2}, Op: operation}
 
 	// Encoding the message
 	rmEncode, err := protobuf.Encode(&rm)
@@ -35,7 +36,7 @@ func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*ma
 	}
 
 	// Test protobuf
-	testM := Messages.RumorMessage{}
+	testM := Messages.RumourMessage{}
 	err = protobuf.Decode(rmEncode, &testM)
 	if err != nil {
 		log.Println(err)
@@ -67,7 +68,7 @@ func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*ma
 	}
 
 	// Returning the result
-	return &responseMessage.Matrix1, nil
+	return responseMessage.Matrix1.Mat, nil
 }
 
 // Add : Addition of two matrices
@@ -77,11 +78,10 @@ func Add(m1, m2 *matrix.Matrix) (*matrix.Matrix, error) {
 
 // Sub : Substruction of two matrices
 func Sub(m1, m2 *matrix.Matrix) (*matrix.Matrix, error) {
-	return askForComputation(m1, m2, Messages.Subs)
+	return askForComputation(m1, m2, Messages.Sub)
 }
 
 // Mult : Multiplication of two matrices
-func Mult(m1, m2 *matrix.Matrix) *matrix.Matrix {
-	// TODO: As above
-	return nil
+func Mult(m1, m2 *matrix.Matrix) (*matrix.Matrix, error) {
+	return askForComputation(m1, m2, Messages.Mul)
 }

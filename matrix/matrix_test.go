@@ -24,7 +24,7 @@ var arithmeticTest = []struct {
 
 func TestAdd(t *testing.T) {
 	for _, tt := range arithmeticTest {
-		sum := matrix.AddMatrix(tt.m1, tt.m2)
+		sum := matrix.Add(tt.m1, tt.m2)
 		if !matrix.Equal(sum, tt.sum) {
 			t.Errorf("Add: expected\n%v\n, actual \n%v\n", tt.sum.ToString(), sum.ToString())
 		}
@@ -33,7 +33,7 @@ func TestAdd(t *testing.T) {
 
 func TestSub(t *testing.T) {
 	for _, tt := range arithmeticTest {
-		sub := matrix.SubMatrix(tt.sum, tt.m1)
+		sub := matrix.Sub(tt.sum, tt.m1)
 		if !matrix.Equal(sub, tt.m2) {
 			t.Errorf("Sub: expected\n%v\n, actual \n%v\n", tt.m2.ToString(), sub.ToString())
 		}
@@ -42,7 +42,7 @@ func TestSub(t *testing.T) {
 
 func TestMul(t *testing.T) {
 	for _, tt := range arithmeticTest {
-		mul := matrix.MulMatrix(tt.m1, tt.m2T)
+		mul := matrix.Mul(tt.m1, tt.m2T)
 		if !matrix.Equal(mul, tt.mul) {
 			t.Errorf("Mul: expected\n%v\n, actual \n%v\n", tt.mul.ToString(), mul.ToString())
 		}

@@ -7,13 +7,13 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/matei13/gomat/Gossiper/tools/Peers"
-	"github.com/matei13/gomat/Gossiper/tools/Tasks"
+	"github.com/matei13/gomat/Gossiper/tools/Pending"
 )
 
 type data struct {
-	Capacity int          `json:"capacity"`
-	Peers    []string     `json:"peers"`
-	Tasks    []Tasks.Task `json:"tasks"`
+	Capacity int            `json:"capacity"`
+	Peers    []string       `json:"peers"`
+	Info     []Pending.Info `json:"tasks"`
 }
 
 type capacity struct {
@@ -42,7 +42,7 @@ func (g *Gossiper) getDataHandler(w http.ResponseWriter, r *http.Request) {
 	jsonEncodeSend(w, data{
 		Capacity: g.MaxCapacity,
 		Peers:    peersList,
-		Tasks:    g.Pending.GetInfos(),
+		Info:     g.Pending.GetInfos(),
 	})
 }
 

@@ -18,27 +18,28 @@ import (
 
 // Gossiper -- Describe a node of a Gossip network
 type Gossiper struct {
-	UIAddr           *net.UnixAddr
-	gossipAddr       *net.UDPAddr
-	UIListener       *net.UnixListener
-	gossipConn       *net.UDPConn
-	name             string
-	peers            Peers.PeerMap
-	idMessage        uint32
-	MessagesReceived map[string]map[uint32]Messages.RumourMessage
-	exchangeEnded    chan bool
-	RoutingTable     RoutingTable
-	mutex            *sync.Mutex
-	rtimer           uint
-	PrivateMessages  []Messages.RumourMessage
-	MaxCapacity      int
-	CurrentCapacity  int
-	Tasks            Tasks.TaskMap                  //Tasks[p]s: all tasks sent to p
-	Pending          Pending.Pending                //Pending[k][i]: for subtask i sent from k, waiting an acknowledgement to start (true when it starts, false when it ends)
-	Finished         chan bool                      //is true when the current task is finished
-	TaskSize         int                            //number of chunks from the current task still being processed
-	DoneTasks        map[uint32]gomatcore.SubMatrix //finished tasks
-	FoundComputer    map[uint32]chan bool           //indicates if we have found someone to do the computations for subtask i
+	gossipAddr      *net.UDPAddr
+	UIListener      *net.UnixListener
+	gossipConn      *net.UDPConn
+	name            string
+	peers           Peers.PeerMap
+	mutex           *sync.Mutex
+	PrivateMessages []Messages.RumourMessage
+	MaxCapacity     int
+	CurrentCapacity int
+	Tasks           Tasks.TaskMap                  //Tasks[p]s: all tasks sent to p
+	Pending         Pending.Pending                //Pending[k][i]: for subtask i sent from k, waiting an acknowledgement to start (true when it starts, false when it ends)
+	Finished        chan bool                      //is true when the current task is finished
+	TaskSize        uint32                         //number of chunks from the current task still being processed
+	DoneTasks       map[uint32]gomatcore.SubMatrix //finished tasks
+	FoundComputer   map[uint32]chan bool           //indicates if we have found someone to do the computations for subtask i
+	Details         Details
+}
+
+type Details struct {
+	rc int
+	rl int
+	n  int
 }
 
 const t1 = 2
@@ -48,7 +49,7 @@ const timer = 30
 const buffSize = 65507
 
 // NewGossiper -- Returns a new gossiper structure
-func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rtimer uint, capa int) (*Gossiper, error) {
+func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, capa int) (*Gossiper, error) {
 	// For UIPort
 	UIAddr, err := net.ResolveUnixAddr("unix", sockFile)
 	if err != nil {
@@ -69,23 +70,17 @@ func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, rt
 	}
 
 	g := &Gossiper{
-		UIAddr:           UIAddr,
-		gossipAddr:       gossipUdpAddr,
-		UIListener:       UIListener,
-		gossipConn:       gossipConn,
-		name:             identifier,
-		peers:            Peers.PeerMap{Map: make(map[string]*Peers.Peer), Lock: &sync.RWMutex{}},
-		idMessage:        1,
-		MessagesReceived: make(map[string]map[uint32]Messages.RumourMessage, 0),
-		exchangeEnded:    make(chan bool),
-		RoutingTable:     *newRoutingTable(),
-		mutex:            &sync.Mutex{},
-		rtimer:           rtimer,
-		MaxCapacity:      capa,
-		CurrentCapacity:  capa,
-		Tasks:            Tasks.TaskMap{Tasks: make(map[string][]Tasks.Task), Lock: &sync.RWMutex{}},
-		Pending:          Pending.Pending{Infos: make(map[string]map[uint32]Pending.Info), Lock: &sync.RWMutex{}},
-		Finished:         make(chan bool),
+		gossipAddr:      gossipUdpAddr,
+		UIListener:      UIListener,
+		gossipConn:      gossipConn,
+		name:            identifier,
+		peers:           Peers.PeerMap{Map: make(map[string]*Peers.Peer), Lock: &sync.RWMutex{}},
+		mutex:           &sync.Mutex{},
+		MaxCapacity:     capa,
+		CurrentCapacity: capa,
+		Tasks:           Tasks.TaskMap{Tasks: make(map[string][]Tasks.Task), Lock: &sync.RWMutex{}},
+		Pending:         Pending.Pending{Infos: make(map[string]map[uint32]Pending.Info), Lock: &sync.RWMutex{}},
+		Finished:        make(chan bool),
 	}
 
 	for _, peerAddr := range peerAddrs {
@@ -199,8 +194,6 @@ func (g *Gossiper) acceptUI(conn *net.UnixConn) {
 func (g *Gossiper) Run() {
 	go g.listenUnix(g.UIListener)
 	go g.listenConn(g.gossipConn)
-	g.sendRouteRumour()
-	g.routeRumourDaemon()
 }
 
 func (g *Gossiper) accept(buffer []byte, addr *net.UDPAddr, nbByte int, isFromClient bool) {
@@ -220,6 +213,7 @@ func (g *Gossiper) AcceptRumourMessage(mess Messages.RumourMessage, addr net.UDP
 		g.FoundComputer = make(map[uint32]chan bool)
 		mess.Origin = g.name
 		g.splitComputation(*mess.Matrix1.Mat, *mess.Matrix2.Mat, mess.Op)
+		go g.merge()
 	} else {
 		if &mess.Matrix2 != nil {
 			a := g.acceptComputation(Tasks.Task{Op: mess.Op, Mat2: mess.Matrix2, Mat1: mess.Matrix1, ID: mess.ID, Origin: addr})
@@ -228,14 +222,15 @@ func (g *Gossiper) AcceptRumourMessage(mess Messages.RumourMessage, addr net.UDP
 				go g.sendRumourMessage(mess, l[rand.Intn(len(l))].Addr)
 			}
 		} else {
-
+			if _, ok := g.DoneTasks[mess.ID]; !ok {
+				g.DoneTasks[mess.ID] = mess.Matrix1
+				g.TaskSize--
+				if g.TaskSize == uint32(0) {
+					g.Finished <- true
+				}
+			}
 		}
 	}
-}
-
-func (g *Gossiper) receivePrivateMessage(message Messages.RumourMessage) {
-	fmt.Println("PRIVATE:", message.Origin+":"+fmt.Sprint(message.HopLimit)+":"+message.Text)
-	g.PrivateMessages = append(g.PrivateMessages, message)
 }
 
 func (g *Gossiper) acceptStatusMessage(mess Messages.StatusMessage, addr *net.UDPAddr) {
@@ -287,52 +282,17 @@ func (g Gossiper) printDebugRumour(mess Messages.RumourMessage, lastHopIP string
 	g.printPeerList()
 }
 
-func (g Gossiper) alreadySeen(id uint32, nodeName string) bool {
-	g.mutex.Lock()
-	_, ok := g.MessagesReceived[nodeName][id]
-	g.mutex.Unlock()
-	return ok
-}
-
-func (g Gossiper) storeRumourMessage(mess Messages.RumourMessage, id uint32, nodeName string) {
-	g.mutex.Lock()
-	if g.MessagesReceived[nodeName] == nil {
-		g.MessagesReceived[nodeName] = make(map[uint32]Messages.RumourMessage)
-	}
-	g.MessagesReceived[nodeName][id] = mess
-	g.mutex.Unlock()
-}
-
-func genRouteRumour() Messages.RumourMessage {
-	mess := Messages.RumourMessage{
-		Text: "",
-	}
-	return mess
-}
-
-func (g *Gossiper) routeRumourDaemon() {
-	tick := time.NewTicker(time.Duration(g.rtimer) * time.Second)
-	for {
-		<-tick.C
-		g.sendRouteRumour()
-	}
-}
-
-func (g *Gossiper) sendRouteRumour() {
-	g.AcceptRumourMessage(genRouteRumour(), *g.gossipAddr, true)
-}
-
 func (g *Gossiper) keepSending(message Messages.RumourMessage) {
 	task := Tasks.Task{
 		Op:     message.Op,
 		Mat2:   message.Matrix2,
 		Mat1:   message.Matrix1,
 		ID:     message.ID,
-		Origin: message.Origin,
+		Origin: *g.gossipAddr,
 	}
 	if g.CurrentCapacity >= task.Size() {
-		g.CurrentCapacity -= s
-		go g.compute(task)
+		g.CurrentCapacity -= task.Size()
+		g.compute(task)
 	} else {
 		l := g.FoundComputer[message.ID]
 		for {
@@ -350,15 +310,19 @@ func (g *Gossiper) keepSending(message Messages.RumourMessage) {
 }
 
 func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operation) {
-	sMat1 := gomatcore.Split(&mat1, g.MaxCapacity/2)
-	sMat2 := gomatcore.Split(&mat2, g.MaxCapacity/2)
+	n := g.MaxCapacity / 2
+	sMat1 := gomatcore.Split(&mat1, n)
+	sMat2 := gomatcore.Split(&mat2, n)
+	rl, _ := mat1.Dims()
+	_, rc := mat2.Dims()
+	g.Details = Details{rl: rl, rc: rc, n: n,}
 	id := uint32(0)
-
 	switch op {
 	case Messages.Sum, Messages.Sub:
 		for _, ssMat1 := range sMat1 {
 			for _, ssMat2 := range sMat2 {
 				if (ssMat1.Row == ssMat2.Row) && (ssMat1.Col == ssMat2.Col) {
+
 					packet := Messages.RumourMessage{
 						Origin:   g.name,
 						ID:       id,
@@ -392,6 +356,7 @@ func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operat
 			}
 		}
 	}
+	g.TaskSize = id
 }
 
 func (g *Gossiper) acceptComputation(task Tasks.Task) bool {
@@ -470,4 +435,18 @@ func (g *Gossiper) splitComputationList(tasks []Tasks.Task) {
 		randomPeer := available[rand.Intn(len(available))]
 		g.sendRumourMessage(packet, randomPeer.Addr)
 	}
+}
+
+func (g *Gossiper) merge() {
+	<-g.Finished
+	l := make([]*gomatcore.SubMatrix, 0)
+	for _, m := range g.DoneTasks {
+		l = append(l, &m)
+	}
+	res := gomatcore.Merge(l, g.Details.rl, g.Details.rc, g.Details.n)
+	mess := &Messages.RumourMessage{Matrix1: gomatcore.SubMatrix{Mat: res}}
+	unixAddr, _ := net.ResolveUnixAddr("unix", "/tmp/gomat.sock")
+	c, _ := net.DialUnix("unix", nil, unixAddr)
+	rmEncode, _ := protobuf.Encode(&mess)
+	c.Write(rmEncode)
 }

@@ -3,7 +3,6 @@ package Messages
 import (
 	"net"
 	"github.com/dedis/protobuf"
-	"github.com/matei13/gomat/Gossiper/tools/Peers"
 )
 
 type StatusMessage struct {

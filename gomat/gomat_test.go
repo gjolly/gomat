@@ -9,6 +9,7 @@ import (
 	"github.com/matei13/gomat/matrix"
 	"time"
 	"fmt"
+	"github.com/matei13/gomat/Daemon/gomatcore"
 )
 
 func daemon() {
@@ -26,10 +27,9 @@ func daemon() {
 		panic(err)
 	}
 	fmt.Println(requestMess)
-
 	r := matrix.New(2, 2, []float64{3, 3, 3, 3})
 	r2 := matrix.New(2, 2, []float64{3, 3, 3, 3})
-	responseMess := Messages.RumorMessage{"", 0, *r, *r2, Messages.Sum, "", "", 0}
+	responseMess := Messages.RumourMessage{Matrix1: gomatcore.SubMatrix{Mat: r}, Matrix2: gomatcore.SubMatrix{Mat: r2}, Op: Messages.Sum}
 	responseBuf, _ := protobuf.Encode(&responseMess)
 
 	c.Write(responseBuf)
