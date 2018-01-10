@@ -1,6 +1,17 @@
-First, all the project must be built.
-//Todo starting and using the API
-Upon starting, a gossiper is created, along with a GUI, available on localhost/8080. From there, it is possible to monitor the gossiper, by changing the maximum computational power or adding peers. Also, all the tasks the node is computing are visible, and so is the list of peers.
+# Gomat
+## Feature
+Decentralized matrix computation
+
+## Build
+```bash
+$ go build
+```
+This build the Daemon
+
+## Usage
+ - Run the daemon and import the package gomat
+ - Create new matrices with `gomat.New()`
+ - Run any computation with `gomat.Add()`, `gomat.Mult()` and `gomat.subs()`
 
 ## Run the GUI
 To run the GUI, the deamon must be running. Then open in your internet browser the file `./Gossiper/GUI/homepage.html`.
