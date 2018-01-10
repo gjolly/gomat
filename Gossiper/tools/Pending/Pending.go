@@ -3,12 +3,13 @@ package Pending
 import (
 	"net"
 	"sync"
+
 	"github.com/matei13/gomat/Gossiper/tools/Tasks"
 )
 
 type Info struct {
-	Size   int
-	Origin net.UDPAddr
+	Size   int         `json:"size"`
+	Origin net.UDPAddr `json:"origin"`
 	Chan   chan bool
 }
 
@@ -17,7 +18,7 @@ type Pending struct {
 	Lock  *sync.RWMutex
 }
 
-func (p *Pending) getInfos() (tab []Info) {
+func (p *Pending) GetInfos() (tab []Info) {
 	tab = make([]Info, 0)
 	p.Lock.Lock()
 	defer p.Lock.Unlock()

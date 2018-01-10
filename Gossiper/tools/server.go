@@ -42,7 +42,7 @@ func (g *Gossiper) getDataHandler(w http.ResponseWriter, r *http.Request) {
 	jsonEncodeSend(w, data{
 		Capacity: g.MaxCapacity,
 		Peers:    peersList,
-		Tasks:    g.Tasks,
+		Tasks:    g.Pending.GetInfos(),
 	})
 }
 
