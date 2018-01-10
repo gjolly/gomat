@@ -221,10 +221,14 @@ func (g *Gossiper) AcceptRumourMessage(mess Messages.RumourMessage, addr net.UDP
 		mess.Origin = g.name
 		g.splitComputation(*mess.Matrix1.Mat, *mess.Matrix2.Mat, mess.Op)
 	} else {
-		a := g.acceptComputation(Tasks.Task{Op: mess.Op, Mat2: mess.Matrix2, Mat1: mess.Matrix1, ID: mess.ID, Origin: addr})
-		if !a {
-			l := g.peers.Available(t1)
-			go g.sendRumourMessage(mess, l[rand.Intn(len(l))].Addr)
+		if &mess.Matrix2 != nil {
+			a := g.acceptComputation(Tasks.Task{Op: mess.Op, Mat2: mess.Matrix2, Mat1: mess.Matrix1, ID: mess.ID, Origin: addr})
+			if !a {
+				l := g.peers.Available(t1)
+				go g.sendRumourMessage(mess, l[rand.Intn(len(l))].Addr)
+			}
+		} else {
+
 		}
 	}
 }
@@ -410,6 +414,7 @@ func (g *Gossiper) compute(task Tasks.Task) {
 	case Messages.Sub:
 		ansToSend.Matrix1 = gomatcore.SubMatrix{Mat: matrix.Mul(task.Mat1.Mat, task.Mat2.Mat), Row: task.Mat1.Row, Col: task.Mat2.Col}
 	}
+	g.CurrentCapacity += task.Size()
 	for {
 		go g.sendRumourMessage(ansToSend, task.Origin)
 		ticker := time.NewTicker(5 * time.Second)
