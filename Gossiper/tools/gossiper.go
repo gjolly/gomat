@@ -244,13 +244,17 @@ func (g *Gossiper) acceptStatusMessage(mess Messages.StatusMessage, addr *net.UD
 		if l := g.Pending.GetChan(s, id); l != nil { //we were waiting to start the task
 			l <- true
 			return
-		} else if _, ok := g.DoneTasks[id]; !ok { // else it means that chan wants to start the task and it is not done
-			//TODO thread to signify ok
-			messEncode, err := protobuf.Encode(&Messages.GossipMessage{Status: &mess})
-			if err != nil {
-				fmt.Println("error protobuf")
+		} else { // else it means that chan wants to start the task and it is not done
+			select {
+			case <-g.FoundComputer[mess.ID]:
+				return
+			default:
+				messEncode, err := protobuf.Encode(&Messages.GossipMessage{Status: &mess})
+				if err != nil {
+					fmt.Println("error protobuf")
+				}
+				g.gossipConn.WriteToUDP(messEncode, addr)
 			}
-			g.gossipConn.WriteToUDP(messEncode, addr)
 		}
 	}
 }
@@ -315,14 +319,16 @@ func (g *Gossiper) sendRouteRumour() {
 }
 
 func (g *Gossiper) keepSending(message Messages.RumourMessage) {
+	l := g.FoundComputer[message.ID]
 	for {
+		peerAvailable := append(g.peers.Available(t1))
+		randomPeer := peerAvailable[rand.Intn(len(peerAvailable))]
+		g.sendRumourMessage(message, randomPeer.Addr)
 		select {
 		case <-l:
 			return
 		case time.After(5 * time.Second):
-			peerAvailable := g.peers.Available(t1)
-			randomPeer := peerAvailable[rand.Intn(len(peerAvailable))]
-			g.sendRumourMessage(packet, randomPeer.Addr)
+			continue
 		}
 	}
 }
@@ -376,6 +382,11 @@ func (g *Gossiper) acceptComputation(task Tasks.Task) bool {
 	s := task.Size()
 	if g.CurrentCapacity >= s {
 		l := g.Pending.CreateChan(task)
+		messEncode, err := protobuf.Encode(&Messages.GossipMessage{Status: &Messages.StatusMessage{ID: task.ID}})
+		if err != nil {
+			fmt.Println("error protobuf")
+		}
+		g.gossipConn.WriteToUDP(messEncode, &task.Origin)
 		select {
 		case <-l:
 			l = make(chan bool, 1)
