@@ -158,10 +158,13 @@
 						<li v-for="peer in peers">{{ peer }}</li>
 					</ul>
 					<br>
-					<button class="btn btn-primary">Add peer</button>
+					<button class="btn btn-primary" onclick="changeCapacity()">Add peer</button>
 				</div>
-				<div class="card" id="tasks" v-for="task in tasks">
-					Task :
+				<div class="card">
+					Tasks :
+					<ul id="tasks">
+						<li v-for="task in tasks">From {{ task.origin }} (size: {{ task.size }})</li>
+					</ul>
 				</div>
 			</div>
 		</main>
