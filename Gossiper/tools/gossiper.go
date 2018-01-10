@@ -273,15 +273,6 @@ func (g Gossiper) printPeerList() {
 	fmt.Println()
 }
 
-func (g Gossiper) printDebugRumour(mess Messages.RumourMessage, lastHopIP string, isFromClient bool) {
-	if isFromClient {
-		fmt.Println("CLIENT", mess, g.name)
-	} else {
-		fmt.Println("Rumour", "origin", mess.Origin, "from", lastHopIP, "ID", mess.ID, "contents", mess.Text)
-	}
-	g.printPeerList()
-}
-
 func (g *Gossiper) keepSending(message Messages.RumourMessage) {
 	task := Tasks.Task{
 		Op:     message.Op,
