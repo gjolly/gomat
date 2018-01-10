@@ -323,16 +323,28 @@ func (g *Gossiper) sendRouteRumour() {
 }
 
 func (g *Gossiper) keepSending(message Messages.RumourMessage) {
-	l := g.FoundComputer[message.ID]
-	for {
-		peerAvailable := append(g.peers.Available(t1))
-		randomPeer := peerAvailable[rand.Intn(len(peerAvailable))]
-		g.sendRumourMessage(message, randomPeer.Addr)
-		select {
-		case <-l:
-			return
-		case time.After(5 * time.Second):
-			continue
+	task := Tasks.Task{
+		Op:     message.Op,
+		Mat2:   message.Matrix2,
+		Mat1:   message.Matrix1,
+		ID:     message.ID,
+		Origin: message.Origin,
+	}
+	if g.CurrentCapacity >= task.Size() {
+		g.CurrentCapacity -= s
+		go g.compute(task)
+	} else {
+		l := g.FoundComputer[message.ID]
+		for {
+			peerAvailable := append(g.peers.Available(t1))
+			randomPeer := peerAvailable[rand.Intn(len(peerAvailable))]
+			g.sendRumourMessage(message, randomPeer.Addr)
+			select {
+			case <-l:
+				return
+			case time.After(5 * time.Second):
+				continue
+			}
 		}
 	}
 }
