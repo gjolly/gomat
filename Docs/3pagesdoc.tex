@@ -129,9 +129,9 @@ In that case, the ‘master’ peer must be informed of their computations, they
     Also, since the failure detector is not perfect, there are timeouts on every routine involving other peers. Upon a short timeout, the task will be dispatched to another peer.
 
     \section{Evaluation Plan}
-    First, we need to be sure, that the matrix splitting, merging, and the operations on them behave as they should.
+    First, we needed to be sure, that the matrix splitting, merging, and the operations on them behave as they should.
 
-    To test the implementation of these operations, unit tests using the \texttt{testing} package available in golang will be written and launched after every change of any of the operations. Also, after being sure that they work locally, we will also test them within a small network.
+    To test the implementation of these operations, unit tests using the \texttt{testing} package available in golang has been written and launched after every change of any of the operations. We also launched tests about splitting, computing on submatrices and then merging the blocks. This mimics the behavior of the final system, the only difference is that the data is not sent through packets.
 
     Since most of the tests will be run through the API, we must also check that when \texttt{Gomat.compute} is executed, the correct tasks are run in the background.
 
