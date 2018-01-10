@@ -57,3 +57,13 @@ func (p *Pending) CreateChan(t Tasks.Task) (l chan bool) {
 	p.Infos[s][i] = Info{Origin: t.Origin, Chan: l, Size: d1}
 	return
 }
+
+func (p *Pending) Exists(s string, id uint32) bool {
+	p.Lock.Lock()
+	defer p.Lock.Unlock()
+	if _, ok := p.Infos[s]; ok {
+		_, ok = p.Infos[s][id]
+		return ok
+	}
+	return false
+}
