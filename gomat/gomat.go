@@ -36,13 +36,13 @@ func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*ma
 	}
 
 	// Test protobuf
-	testM := Messages.RumourMessage{}
-	err = protobuf.Decode(rmEncode, &testM)
-	if err != nil {
-		log.Println(err)
-	}
-	fmt.Println("Request message: ", rm)
-	fmt.Println("Test Protobuf: ", testM)
+	//testM := Messages.RumourMessage{}
+	//err = protobuf.Decode(rmEncode, &testM)
+	//if err != nil {
+	//	log.Println(err)
+	//}
+	//fmt.Println("Request message: ", rm)
+	//fmt.Println("Test Protobuf: ", testM)
 
 	// Sending the message to the gossiper
 	_, err = c.Write(rmEncode)
