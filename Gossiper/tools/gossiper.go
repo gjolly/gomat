@@ -6,13 +6,14 @@ import (
 	"net"
 	"sync"
 	"time"
+
 	"github.com/dedis/protobuf"
+	"github.com/matei13/gomat/Daemon/gomatcore"
 	"github.com/matei13/gomat/Gossiper/tools/Messages"
 	"github.com/matei13/gomat/Gossiper/tools/Peers"
+	"github.com/matei13/gomat/Gossiper/tools/Pending"
 	"github.com/matei13/gomat/Gossiper/tools/Tasks"
 	"github.com/matei13/gomat/matrix"
-	"github.com/matei13/gomat/Daemon/gomatcore"
-	"github.com/matei13/gomat/Gossiper/tools/Pending"
 )
 
 // Gossiper -- Describe a node of a Gossip network
@@ -313,6 +314,19 @@ func (g *Gossiper) sendRouteRumour() {
 	g.AcceptRumourMessage(genRouteRumour(), *g.gossipAddr, true)
 }
 
+func (g *Gossiper) keepSending(message Messages.RumourMessage) {
+	for {
+		select {
+		case <-l:
+			return
+		case time.After(5 * time.Second):
+			peerAvailable := g.peers.Available(t1)
+			randomPeer := peerAvailable[rand.Intn(len(peerAvailable))]
+			g.sendRumourMessage(packet, randomPeer.Addr)
+		}
+	}
+}
+
 func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operation) {
 	sMat1 := gomatcore.Split(&mat1, g.MaxCapacity/2)
 	sMat2 := gomatcore.Split(&mat2, g.MaxCapacity/2)
@@ -323,17 +337,16 @@ func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operat
 		for _, ssMat1 := range sMat1 {
 			for _, ssMat2 := range sMat2 {
 				if (ssMat1.Row == ssMat2.Row) && (ssMat1.Col == ssMat2.Col) {
-					peerAvailable := g.peers.Available(t1)
-					randomPeer := peerAvailable[rand.Intn(len(peerAvailable))]
 					packet := Messages.RumourMessage{
-						Origin:  g.name,
-						ID:      id,
-						Matrix1: *ssMat1,
-						Matrix2: *ssMat2,
-						Op:      op,
+						Origin:   g.name,
+						ID:       id,
+						Matrix1:  *ssMat1,
+						Matrix2:  *ssMat2,
+						Op:       op,
+						HopLimit: 5,
 					}
 					g.FoundComputer[id] = make(chan bool, 0)
-					g.sendRumourMessage(packet, randomPeer.Addr)
+					go g.keepSending(packet)
 					id++
 				}
 			}
@@ -342,17 +355,16 @@ func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operat
 		for _, ssMat1 := range sMat1 {
 			for _, ssMat2 := range sMat2 {
 				if ssMat1.Row == ssMat2.Col {
-					peerAvailable := g.peers.Available(t1)
-					randomPeer := peerAvailable[rand.Intn(len(peerAvailable))]
 					packet := Messages.RumourMessage{
-						Origin:  g.name,
-						ID:      id,
-						Matrix1: *ssMat1,
-						Matrix2: *ssMat2,
-						Op:      op,
+						Origin:   g.name,
+						ID:       id,
+						Matrix1:  *ssMat1,
+						Matrix2:  *ssMat2,
+						Op:       op,
+						HopLimit: 5,
 					}
+					go g.keepSending(packet)
 					g.FoundComputer[id] = make(chan bool, 0)
-					g.sendRumourMessage(packet, randomPeer.Addr)
 					id++
 				}
 			}
