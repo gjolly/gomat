@@ -37,6 +37,7 @@ type Gossiper struct {
 	Finished         chan bool                      //is true when the current task is finished
 	TaskSize         int                            //number of chunks from the current task still being processed
 	DoneTasks        map[uint32]gomatcore.SubMatrix //finished tasks
+	FoundComputer    map[uint32]chan bool           //indicates if we have found someone to do the computations for subtask i
 }
 
 const t1 = 2
@@ -215,6 +216,7 @@ func (g *Gossiper) accept(buffer []byte, addr *net.UDPAddr, nbByte int, isFromCl
 func (g *Gossiper) AcceptRumourMessage(mess Messages.RumourMessage, addr net.UDPAddr, isFromClient bool) {
 	if isFromClient {
 		g.DoneTasks = make(map[uint32]gomatcore.SubMatrix)
+		g.FoundComputer = make(map[uint32]chan bool)
 		mess.Origin = g.name
 		g.splitComputation(*mess.Matrix1.Mat, *mess.Matrix2.Mat, mess.Op)
 	} else {
@@ -330,6 +332,7 @@ func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operat
 						Matrix2: *ssMat2,
 						Op:      op,
 					}
+					g.FoundComputer[id] = make(chan bool, 0)
 					g.sendRumourMessage(packet, randomPeer.Addr)
 					id++
 				}
@@ -348,6 +351,7 @@ func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operat
 						Matrix2: *ssMat2,
 						Op:      op,
 					}
+					g.FoundComputer[id] = make(chan bool, 0)
 					g.sendRumourMessage(packet, randomPeer.Addr)
 					id++
 				}
