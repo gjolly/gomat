@@ -39,19 +39,21 @@
         Our API is a \Go package which is used to communicate with the daemon. A user that wants to compute an operation between to big matrices calls\\
     \texttt{Gomat.compute(matrix1, matrix2 Matrix, operation Gomat.Operation) (result Matrix, err error)}
 
-        \subsection{Failure management}
+        \subsection{Computations redistribution and failure management}
+    We want to be able to redistribute properly the tasks, from the master node to the others, be reliable and fast, despite the networks flaws.        
+        
     Since it is a decentralised system where one peer delegates part of its job to others, it is essential to detect failures, manage them, and implement methods that make the system more resilient.
 
-    It must be noted that failure detection and management work both ways. For a given computation, the gossiper that wants its job done must detect failing peers, so that it does not have to wait forever for their reply---and it should sent the dropped task to other peers for computations---, but ‘computing’ gossiper want to detect if the node that send them tasks fails, so that they can drop the job and reallocate their resources.
+    It must be noted that failure detection and management work both ways. For a given computation, the gossiper that wants its job done must detect failing peers, so that it does not have to wait forever for their reply.
 
     \section{Design and Architecture}
     \begin{figure}[!ht]
-        \includegraphics[width=.95\textwidth]{global_view.pdf}
+        \includegraphics[width=.95\textwidth]{global_view.png}
         \caption{Global view}
         \label{glbView}
     \end{figure}
     \begin{figure}[!ht]
-        \includegraphics[width=.95\textwidth]{daemon_view.pdf}
+        \includegraphics[width=.95\textwidth]{daemon_view.PNG}
         \caption{Daemon architecture}
         \label{daemonView}
     \end{figure}
@@ -86,32 +88,33 @@
     The application using the API and the Daemon are running on the same computer. Thus, there is no need to use the network (i.e. the loopback interface).
     We use \texttt{Inter-Process Communication (IPC) sockets} to send information between the daemon and the API.
 
-        \subsection{Failure management}
-        Failure detection will be supervised by Matei Oltean.
+        \subsection{Computations redistribution and failure management}
+        Computations redistribution and failure management will be supervised by Matei Oltean.
+
+        \subsubsection{Computations redistribution}
+    Each gossiper doing computations has a maximum computational power, and a current one (reduced for every current computation).
+    
+    When a gossiper receives a computation order from the API, the following happen:
+    \begin{itemize}
+    \item That gossiper splits the matrices, which should be of a maximum size \texttt{self.MaximumComputationalPower}. There is a trade-off, since if the matrices are too small, there is no real gain (too much time is lost splitting and sending), and if they are too big, nobody will be able to take care of the computation. So, we decided that only the initial gossiper can split the matrices, and that they should be moderately big.
+    \item Then it sends pairs of submatrices, with the operation to perform on them (as subtasks) to random alive peers or itself. They can either accept the task, or not. For each task, after a timeout, the task sent is not being taken care of, it is sent again to another random peer.
+    \item When a peer receives a subtasks, it checks if it can compute it. If it is too big, it send it again to another random peer. To ensure that these messages do not keep being sent indefinitely, they have a \texttt{HopLimit} field, which is decreased every time it is sent again, and the message is discarded when it reaches 0.
+    If the peer can take care of the computation, it does not start it yet, but sends a message to inform the initial node that it is ready to do so, and waits for an acknowledgement to start.
+    \item For each subtask, the master node selects the first node that can take care of it as the owner of the computation and sends it a message back to inform it.
+    \item Then, it waits for all the subresults, and when every computation is done, the submatrices are merged and sent to the API.
+    \end{itemize}
 
         \subsubsection{Detecting failures}
-    To manage failures, we first need to detect them.
-
-    When \texttt{Gomat.compute} is used, the \Gomat daemon will first check that all of its peers are working. To that effect, it will send them a particular message and will wait for an acknowledgement. If after some time, some do not reply, they will be considered to have failed, will be removed from the list of peers, and no task will be sent to them.
-
-~~
-
-    Whenever a ‘master’ gossiper splits a computation and sends it to peers for computing, it creates a routine for each contacted gossiper, that listens and writes to it.
-When a gossiper receives the job, it acknowledges it by sending an answer to the master gossiper.
-Then, the master will send back a message to the gossiper, who will reply, and so one.
-
-    If at any point, a gossiper times out when listening (i.e. it does not receive an answer fast enough), the other node is considered to have failed.
-
-~~
-
-    It must be noted that such a message coming from an unknown peer is received, it will be added to the list of potential peers.
-
+    To manage failures, we first need to detect them. No failure detector can be perfect, but it must be eventually perfect. We also need to make sure that we do not saturate the server with ping messages to detect failures, since that could lead to other failures. Also, we do not want to suspect other nodes too early, since it is costlier to have less peers than having detected failing ones too late.
+    
+    We used a heuristic similar to the \textit{route flap damping} of BGP. Whenever we add a peer, we set a counter for it, starting at 0. Every \textit{timer} seconds, we send it a message and we increment the counter. Whenever we receive a status message from him, we decrement it. A peer that has a counter above a certain (small) threshold is considered to have been failed.
+    
     \subsubsection{Failure management}
     When a gossiper $g$ finds that another one, $a$, has failed, it will be removed from the list of peers, the routine created to communicate with $a$ will be killed and one of the three will occur:
 
 \begin{itemize}
 \item If $a$ was doing some computation for $g$, $g$ will split the computation between its remaining peers.
-\item If $g$ was doing some computation for $a$, $a$ will stop its computation.
+\item If $g$ was doing some computation for $a$, $a$ will stop its computation, and not send the result back anymore.
 \item In any other case, nothing more will be done.
 \end{itemize}
 
@@ -122,6 +125,8 @@ In that case, the ‘master’ peer must be informed of their computations, they
     Then, if $g$ crashes, not all of the computations sent to him will have to be redone, since some subtasks are now processed by its peers.
 
     The master node will also be able to add gossipers to its list of known peers, and the network will be more robust.
+    
+    Also, since the failure detector is not perfect, there are timeouts on every routine involving other peers. Upon a short timeout, the task will be dispatched to another peer.
 
     \section{Evaluation Plan}
     First, we need to be sure, that the matrix splitting, merging, and the operations on them behave as they should.

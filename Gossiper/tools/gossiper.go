@@ -42,7 +42,7 @@ type Details struct {
 	n  int
 }
 
-const t1 = 2
+const t1 = 3 //threshold for the timeouts
 
 const timer = 30
 
