@@ -2,7 +2,6 @@ package matrix
 
 import (
 	"fmt"
-
 	"gonum.org/v1/gonum/mat"
 )
 

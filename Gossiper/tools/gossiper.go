@@ -391,11 +391,12 @@ func (g *Gossiper) compute(task Tasks.Task) {
 		case <-l:
 			return
 		case <-ticker.C:
-
+			continue
 		}
 	}
 }
 
+//listens and kills/repurposes processes associated with a dead node
 func (g *Gossiper) listenGossiper(addr net.UDPAddr) {
 	tick := time.NewTicker(time.Duration(timer * time.Second))
 	IPAddress := addr.String()
@@ -404,6 +405,9 @@ func (g *Gossiper) listenGossiper(addr net.UDPAddr) {
 		g.sendStatusMessage(addr)
 		count := g.peers.Incr(IPAddress)
 		if count > t1 {
+			for _, a := range g.Pending.GetChans(addr.String()) {
+				a <- true
+			}
 			l := g.Tasks.GetTasks(addr.String())
 			if l != nil && len(l) > 0 {
 				g.splitComputationList(l)

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
-
 	"github.com/gorilla/mux"
 	"github.com/matei13/gomat/Gossiper/tools/Peers"
 	"github.com/matei13/gomat/Gossiper/tools/Pending"
