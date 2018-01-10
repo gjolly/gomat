@@ -33,10 +33,11 @@ type Gossiper struct {
 	PrivateMessages  []Messages.RumourMessage
 	MaxCapacity      int
 	CurrentCapacity  int
-	Tasks            Tasks.TaskMap   //Tasks[p]: all tasks sent to p
-	Pending          Pending.Pending //Pending[k][i]: for subtask i sent from k, waiting an acknowledgement to start (true when it starts, false when it ends)
-	Finished         chan bool       //is true when the current task is finished
-	TaskSize         int             //number of chunks from the current task still being processed
+	Tasks            Tasks.TaskMap                  //Tasks[p]s: all tasks sent to p
+	Pending          Pending.Pending                //Pending[k][i]: for subtask i sent from k, waiting an acknowledgement to start (true when it starts, false when it ends)
+	Finished         chan bool                      //is true when the current task is finished
+	TaskSize         int                            //number of chunks from the current task still being processed
+	DoneTasks        map[uint32]gomatcore.SubMatrix //finished tasks
 }
 
 const t1 = 2
@@ -137,17 +138,20 @@ func (g *Gossiper) AddPeer(address net.UDPAddr) {
 
 func (g Gossiper) sendRumourMessage(message Messages.RumourMessage, addr net.UDPAddr) error {
 	gossipMessage := Messages.GossipMessage{Rumour: &message}
+	gossipMessage.Rumour.HopLimit--
 	messEncode, err := protobuf.Encode(&gossipMessage)
 	if err != nil {
 		fmt.Println("error protobuf")
 		return err
 	}
-	g.gossipConn.WriteToUDP(messEncode, &addr)
+	if gossipMessage.Rumour.HopLimit > 0 {
+		g.gossipConn.WriteToUDP(messEncode, &addr)
+	}
 	return nil
 }
 
 func (g Gossiper) sendStatusMessage(addr net.UDPAddr) error {
-	messEncode, err := protobuf.Encode(&Messages.GossipMessage{Status: &Messages.StatusMessage{}})
+	messEncode, err := protobuf.Encode(&Messages.GossipMessage{Status: &Messages.StatusMessage{ID: -1}})
 	if err != nil {
 		fmt.Println("error protobuf")
 		return err
@@ -210,44 +214,15 @@ func (g *Gossiper) accept(buffer []byte, addr *net.UDPAddr, nbByte int, isFromCl
 
 //Callback function, call when a message is received
 func (g *Gossiper) AcceptRumourMessage(mess Messages.RumourMessage, addr net.UDPAddr, isFromClient bool) {
-
-	if !isFromClient && g.alreadySeen(mess.ID, mess.Origin) {
-		return
-	}
-
 	if isFromClient {
+		g.DoneTasks = make(map[uint32]gomatcore.SubMatrix)
 		mess.Origin = g.name
-		if !mess.IsPrivate() {
-			g.mutex.Lock()
-			mess.ID = g.idMessage
-			g.idMessage++
-			g.mutex.Unlock()
-		} else {
-			mess.HopLimit = 10
-		}
+		g.splitComputation(*mess.Matrix1.Mat, *mess.Matrix2.Mat, mess.Op)
 	} else {
-		g.mutex.Lock()
-		fmt.Println("DSDV", mess.Origin+":"+addr.String())
-		g.RoutingTable.add(mess.Origin, addr.String())
-		g.mutex.Unlock()
-	}
-
-	if mess.Text != "" {
-		g.printDebugRumour(mess, addr.String(), isFromClient)
-	}
-
-	if !mess.IsPrivate() {
-		g.storeRumourMessage(mess, mess.ID, mess.Origin)
-
-		if !isFromClient {
-			g.sendStatusMessage(addr)
-			g.AddPeer(addr)
-		}
-	} else {
-		if mess.HopLimit > 1 && mess.Dest != g.name {
-			g.forward(mess)
-		} else if mess.Dest == g.name {
-			g.receivePrivateMessage(mess)
+		a := g.acceptComputation(Tasks.Task{Op: mess.Op, Mat2: mess.Matrix2, Mat1: mess.Matrix1, ID: mess.ID, Origin: addr})
+		if !a {
+			l := g.peers.Available(t1)
+			go g.sendRumourMessage(mess, l[rand.Intn(len(l))].Addr)
 		}
 	}
 }
@@ -257,21 +232,25 @@ func (g *Gossiper) receivePrivateMessage(message Messages.RumourMessage) {
 	g.PrivateMessages = append(g.PrivateMessages, message)
 }
 
-func (g Gossiper) forward(message Messages.RumourMessage) {
-	message.HopLimit -= 1
-	addr := g.RoutingTable.FindNextHop(message.Dest)
-	if addr != "" {
-		UDPAddr, err := net.ResolveUDPAddr("udp4", addr)
-		if err == nil {
-			fmt.Println("FORWARD private msg", message.Dest, addr)
-			g.sendRumourMessage(message, *UDPAddr)
-		}
-	}
-}
-
 func (g *Gossiper) acceptStatusMessage(mess Messages.StatusMessage, addr *net.UDPAddr) {
 	g.AddPeer(*addr)
-	g.peers.Decr(addr.String())
+	if mess.ID == -1 {
+		g.peers.Decr(addr.String())
+	} else {
+		id := uint32(mess.ID)
+		s := addr.String()
+		if l := g.Pending.GetChan(s, id); l != nil { //we were waiting to start the task
+			l <- true
+			return
+		} else if _, ok := g.DoneTasks[id]; !ok { // else it means that chan wants to start the task and it is not done
+			//TODO thread to signify ok
+			messEncode, err := protobuf.Encode(&Messages.GossipMessage{Status: &mess})
+			if err != nil {
+				fmt.Println("error protobuf")
+			}
+			g.gossipConn.WriteToUDP(messEncode, addr)
+		}
+	}
 }
 
 func (g Gossiper) printPeerList() {
