@@ -2,6 +2,7 @@ package matrix
 
 import (
 	"fmt"
+
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -74,4 +75,12 @@ func (m Matrix) MaxDim() int {
 		return x
 	}
 	return y
+}
+
+func (m Matrix) MarshalJSON() ([]byte, error) {
+	return m.toDense().MarshalBinary()
+}
+
+func (m Matrix) UnmarshalJSON(b []byte) error {
+	return m.toDense().UnmarshalBinary(b)
 }
