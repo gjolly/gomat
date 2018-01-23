@@ -5,6 +5,7 @@ import (
 	"github.com/dedis/protobuf"
 	"github.com/matei13/gomat/Daemon/gomatcore"
 	"fmt"
+	"github.com/matei13/gomat/matrix"
 )
 
 type RumourMessage struct {
@@ -12,6 +13,22 @@ type RumourMessage struct {
 	ID       uint32
 	Matrix1  gomatcore.SubMatrix
 	Matrix2  gomatcore.SubMatrix
+	Op       Operation
+	Dest     string
+	Text     string
+	HopLimit uint32
+}
+
+type MessageEncode struct {
+	Origin   string
+	ID       uint32
+	Matrix1  []byte
+	M1Col    uint32
+	M1Row    uint32
+	Matrix2  []byte
+	M2Col    uint32
+	M2Row    uint32
+	M2Size   []uint
 	Op       Operation
 	Dest     string
 	Text     string
@@ -27,7 +44,7 @@ func (m RumourMessage) IsPrivate() bool {
 }
 
 func (rm RumourMessage) Send(conn *net.UDPConn, addr net.UDPAddr) error {
-	rmEncode, err := protobuf.Encode(&rm)
+	rmEncode, err := rm.MarshallBinary()
 	if err != nil {
 		return err
 	}
@@ -36,4 +53,85 @@ func (rm RumourMessage) Send(conn *net.UDPConn, addr net.UDPAddr) error {
 		return err
 	}
 	return err
+}
+
+func (rm RumourMessage) MarshallBinary() ([]byte, error) {
+	b1, err := rm.Matrix1.Mat.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	b2, err := rm.Matrix1.Mat.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	mb := MessageEncode{
+		Origin:   rm.Origin,
+		ID:       rm.ID,
+		Matrix1:  b1,
+		M1Row:    rm.Matrix1.Row,
+		M1Col:    rm.Matrix1.Col,
+		Matrix2:  b2,
+		M2Row:    rm.Matrix2.Row,
+		M2Col:    rm.Matrix2.Col,
+		Op:       rm.Op,
+		Dest:     rm.Dest,
+		Text:     rm.Text,
+		HopLimit: rm.HopLimit,
+	}
+
+	byteMessage, err := protobuf.Encode(&mb)
+	if err != nil {
+		return nil, err
+	}
+
+	return byteMessage, nil
+
+}
+
+func (me *MessageEncode) parseMatrices() (*gomatcore.SubMatrix, *gomatcore.SubMatrix, error) {
+	mat1 := matrix.Matrix{}
+	mat2 := matrix.Matrix{}
+
+	err := mat1.UnmarshalBinary(me.Matrix1)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sm1 := gomatcore.SubMatrix{Mat: &mat1, Row: me.M1Col, Col: me.M1Row}
+
+	err = mat2.UnmarshalBinary(me.Matrix2)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sm2 := gomatcore.SubMatrix{Mat: &mat2, Row: me.M2Col, Col: me.M2Row}
+
+	return &sm1, &sm2, nil
+}
+
+func (rm *RumourMessage) UnmarshallBinary(buf []byte) error {
+	me := &MessageEncode{}
+
+	err := protobuf.Decode(buf, me)
+	if err != nil {
+		return err
+	}
+
+	sm1, sm2, err := me.parseMatrices()
+
+	rm = &RumourMessage{
+		Origin:   me.Origin,
+		ID:       me.ID,
+		Matrix1:  *sm1,
+		Matrix2:  *sm2,
+		Op:       me.Op,
+		Dest:     me.Dest,
+		Text:     me.Text,
+		HopLimit: me.HopLimit,
+	}
+
+	return nil
+
 }

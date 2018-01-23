@@ -9,8 +9,8 @@ import (
 // SubMatrix represent a block of a matrix.
 type SubMatrix struct {
 	Mat *matrix.Matrix // Block
-	Row int            // Row of the block in the original matrix
-	Col int            // Column of the block in the original matrix
+	Row uint32            // Row of the block in the original matrix
+	Col uint32            // Column of the block in the original matrix
 }
 
 func min(x, y int) int {
@@ -34,8 +34,8 @@ func Split(m *matrix.Matrix, n int) []*SubMatrix {
 			cMax := min((j+1)*n, c)
 			matrices[i*nbCol+j] = &SubMatrix{
 				Mat: m.Slice(rMin, rMax, cMin, cMax),
-				Row: i,
-				Col: j,
+				Row: uint32(i),
+				Col: uint32(j),
 			}
 		}
 	}
@@ -55,7 +55,7 @@ func Merge(matrices []*SubMatrix, rM, cM, n int) *matrix.Matrix {
 	for _, sm := range matrices {
 		r, c := sm.Mat.Dims()
 		for k := 0; k < r; k++ {
-			pos := (sm.Row*n+k)*cM + sm.Col*n
+			pos := (int(sm.Row)*n+k)*cM + int(sm.Col)*n
 			copy(data[pos:pos+c], sm.Mat.RawRowView(k))
 		}
 	}

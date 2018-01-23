@@ -4,12 +4,11 @@ import (
 	"net"
 	"log"
 	"github.com/matei13/gomat/Gossiper/tools/Messages"
-	"github.com/dedis/protobuf"
 	"github.com/matei13/gomat/matrix"
-	"fmt"
 	"github.com/matei13/gomat/Daemon/gomatcore"
 )
 
+// askForComputation sends a computation request to the daemon via /tmp/gomat.sock
 func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*matrix.Matrix, error) {
 	//Resolving Unix addr to unix socket
 	unixAddr, err := net.ResolveUnixAddr("unix", "/tmp/gomat.sock")
@@ -24,25 +23,17 @@ func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*ma
 		log.Println(err)
 		return nil, err
 	}
+	defer c.Close()
 
 	// Creating the message
 	rm := Messages.RumourMessage{Matrix1: gomatcore.SubMatrix{Mat: m1}, Matrix2: gomatcore.SubMatrix{Mat: m2}, Op: operation}
 
 	// Encoding the message
-	rmEncode, err := protobuf.Encode(&rm)
+	rmEncode, err := rm.MarshallBinary()
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-
-	// Test protobuf
-	//testM := Messages.RumourMessage{}
-	//err = protobuf.Decode(rmEncode, &testM)
-	//if err != nil {
-	//	log.Println(err)
-	//}
-	//fmt.Println("Request message: ", rm)
-	//fmt.Println("Test Protobuf: ", testM)
 
 	// Sending the message to the gossiper
 	_, err = c.Write(rmEncode)
@@ -54,19 +45,21 @@ func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*ma
 	// Waiting for a response...
 	response := make([]byte, 65507)
 	nb, _, err := c.ReadFromUnix(response)
+	log.Println("askForComputation: size response", nb, response[:nb])
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
 	// Decoding the response
-	responseMessage := Messages.RumourMessage{}
-	err = protobuf.Decode(response[0:nb], &responseMessage)
+	responseMessage := &Messages.RumourMessage{}
+	err = responseMessage.UnmarshallBinary(response[:nb])
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
 
+	log.Println("askForComputation: response message", responseMessage)
 	// Returning the result
 	return responseMessage.Matrix1.Mat, nil
 }

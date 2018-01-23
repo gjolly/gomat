@@ -77,10 +77,10 @@ func (m Matrix) MaxDim() int {
 	return y
 }
 
-func (m Matrix) MarshalJSON() ([]byte, error) {
+func (m Matrix) MarshalBinary() ([]byte, error) {
 	return m.toDense().MarshalBinary()
 }
 
-func (m Matrix) UnmarshalJSON(b []byte) error {
+func (m *Matrix) UnmarshalBinary(b []byte) error {
 	return m.toDense().UnmarshalBinary(b)
 }
