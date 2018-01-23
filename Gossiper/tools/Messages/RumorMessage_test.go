@@ -31,6 +31,6 @@ func TestRumourMessage_MarshallBinary(t *testing.T) {
 		log.Println(err)
 	}
 
-	log.Println("m1 at the beginning:", m1)
-	log.Println("m1 at the end:", testM)
+	log.Println("m1 at the beginning:", m2)
+	log.Println("m1 at the end:", testM.Matrix2.Mat)
 }

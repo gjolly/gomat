@@ -20,8 +20,8 @@ func New(r, c int, data []float64) *Matrix {
 	return &m
 }
 
-// ToString returns the string representation of the matrix.
-func (m *Matrix) ToString() string {
+// String returns the string representation of the matrix.
+func (m *Matrix) String() string {
 	return fmt.Sprintf("%v", mat.Formatted(m.toDense(), mat.Squeeze()))
 }
 
@@ -85,6 +85,6 @@ func (m *Matrix) UnmarshalBinary(b []byte) error {
 	mDense := m.toDense()
 	err := mDense.UnmarshalBinary(b)
 	matrix := Matrix(*mDense)
-	m = &matrix
+	*m = matrix
 	return err
 }

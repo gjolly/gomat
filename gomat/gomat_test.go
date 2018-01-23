@@ -9,7 +9,6 @@ import (
 	"time"
 	"fmt"
 	"github.com/matei13/gomat/Daemon/gomatcore"
-	"log"
 )
 
 // Daemon reads a request sent by the API and return
@@ -31,13 +30,12 @@ func daemon() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(requestMess)
+	fmt.Printf("%v\n+\n%v\n", requestMess.Matrix1, requestMess.Matrix2)
 	r := matrix.New(2, 2, []float64{3, 3, 3, 3})
 	r2 := matrix.New(2, 2, []float64{3, 3, 3, 3})
 	responseMess := Messages.RumourMessage{Matrix1: gomatcore.SubMatrix{Mat: r}, Matrix2: gomatcore.SubMatrix{Mat: r2}, Op: Messages.Sum}
 	responseBuf, _ := responseMess.MarshallBinary()
 
-	log.Println("Daemon: response message", responseMess)
 	c.Write(responseBuf)
 }
 
@@ -48,6 +46,7 @@ func TestAdd(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("=")
 	fmt.Println(r)
 }
 

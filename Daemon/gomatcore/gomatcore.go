@@ -46,6 +46,10 @@ func (m SubMatrix) MaxDim() int {
 	return m.Mat.MaxDim()
 }
 
+func (m SubMatrix) String() string {
+	return m.Mat.String()
+}
+
 // Merge i*j sub-matrices into one matrix
 func Merge(matrices []*SubMatrix, rM, cM, n int) *matrix.Matrix {
 	//rM, cM := mergedSize(matrices)

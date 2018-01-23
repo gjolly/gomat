@@ -45,7 +45,6 @@ func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*ma
 	// Waiting for a response...
 	response := make([]byte, 65507)
 	nb, _, err := c.ReadFromUnix(response)
-	log.Println("askForComputation: size response", nb, response[:nb])
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -59,7 +58,6 @@ func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*ma
 		return nil, err
 	}
 
-	log.Println("askForComputation: response message", responseMessage)
 	// Returning the result
 	return responseMessage.Matrix1.Mat, nil
 }

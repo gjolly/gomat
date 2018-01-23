@@ -61,7 +61,7 @@ func (rm RumourMessage) MarshallBinary() ([]byte, error) {
 		return nil, err
 	}
 
-	b2, err := rm.Matrix1.Mat.MarshalBinary()
+	b2, err := rm.Matrix2.Mat.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (rm *RumourMessage) UnmarshallBinary(buf []byte) error {
 
 	sm1, sm2, err := me.parseMatrices()
 
-	rm = &RumourMessage{
+	*rm = RumourMessage{
 		Origin:   me.Origin,
 		ID:       me.ID,
 		Matrix1:  *sm1,
