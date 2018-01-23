@@ -82,5 +82,9 @@ func (m Matrix) MarshalBinary() ([]byte, error) {
 }
 
 func (m *Matrix) UnmarshalBinary(b []byte) error {
-	return m.toDense().UnmarshalBinary(b)
+	mDense := m.toDense()
+	err := mDense.UnmarshalBinary(b)
+	matrix := Matrix(*mDense)
+	m = &matrix
+	return err
 }
