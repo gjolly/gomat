@@ -6,7 +6,7 @@ import (
 )
 
 type StatusMessage struct {
-	ID uint32
+	ID int32
 }
 
 func (sm StatusMessage) Send(conn *net.UDPConn, addr net.UDPAddr) error {

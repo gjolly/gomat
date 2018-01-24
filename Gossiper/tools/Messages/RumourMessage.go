@@ -39,22 +39,32 @@ func (m RumourMessage) String() string {
 	return fmt.Sprint(m.Matrix1) + " " + fmt.Sprint(m.Matrix2)
 }
 
+// IsPrivate test if a message is private or not
 func (m RumourMessage) IsPrivate() bool {
 	return m.Dest != ""
 }
 
+// Send sends a Rumour message over the specified UDP connection
 func (rm RumourMessage) Send(conn *net.UDPConn, addr net.UDPAddr) error {
 	rmEncode, err := rm.MarshallBinary()
 	if err != nil {
 		return err
 	}
-	_, err = conn.WriteToUDP(rmEncode, &addr)
+
+	g := GossipMessage{Rumour: rmEncode}
+	gEncode, err := protobuf.Encode(&g)
+	if err != nil {
+		return err
+	}
+
+	_, err = conn.WriteToUDP(gEncode, &addr)
 	if err != nil {
 		return err
 	}
 	return err
 }
 
+// MarshallBinary encodes a RumorMessage into a []byte
 func (rm RumourMessage) MarshallBinary() ([]byte, error) {
 	b1, err := rm.Matrix1.Mat.MarshalBinary()
 	if err != nil {
@@ -111,6 +121,8 @@ func (me *MessageEncode) parseMatrices() (*gomatcore.SubMatrix, *gomatcore.SubMa
 	return &sm1, &sm2, nil
 }
 
+// UnmarshallBinary is the opposite of MarshallBinary. It converts a []byte into a
+// RumourMessage
 func (rm *RumourMessage) UnmarshallBinary(buf []byte) error {
 	me := &MessageEncode{}
 

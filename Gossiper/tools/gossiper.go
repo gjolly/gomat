@@ -133,14 +133,16 @@ func (g *Gossiper) AddPeer(address net.UDPAddr) {
 }
 
 func (g Gossiper) sendRumourMessage(message Messages.RumourMessage, addr net.UDPAddr) error {
-	gossipMessage := Messages.GossipMessage{Rumour: &message}
-	gossipMessage.Rumour.HopLimit--
+	message.HopLimit -= 1
+	hopLimit := message.HopLimit
+	rmEncode, err := message.MarshallBinary()
+	gossipMessage := Messages.GossipMessage{Rumour: rmEncode}
 	messEncode, err := protobuf.Encode(&gossipMessage)
 	if err != nil {
 		fmt.Println("error protobuf")
 		return err
 	}
-	if gossipMessage.Rumour.HopLimit > 0 {
+	if hopLimit > 0 {
 		g.gossipConn.WriteToUDP(messEncode, &addr)
 	}
 	return nil
@@ -200,7 +202,9 @@ func (g *Gossiper) accept(buffer []byte, addr *net.UDPAddr, nbByte int, isFromCl
 	mess := &Messages.GossipMessage{}
 	protobuf.Decode(buffer, mess)
 	if mess.Rumour != nil {
-		g.AcceptRumourMessage(*mess.Rumour, *addr, isFromClient)
+		rm := &Messages.RumourMessage{}
+		rm.UnmarshallBinary(mess.Rumour)
+		g.AcceptRumourMessage(*rm, *addr, isFromClient)
 	} else if mess.Status != nil {
 		g.acceptStatusMessage(*mess.Status, addr)
 	}
@@ -245,7 +249,7 @@ func (g *Gossiper) acceptStatusMessage(mess Messages.StatusMessage, addr *net.UD
 			return
 		} else { // else it means that chan wants to start the task and it is not done
 			select {
-			case <-g.FoundComputer[mess.ID]:
+			case <-g.FoundComputer[uint32(mess.ID)]:
 				return
 			default:
 				messEncode, err := protobuf.Encode(&Messages.GossipMessage{Status: &mess})
@@ -293,7 +297,8 @@ func (g *Gossiper) keepSending(message Messages.RumourMessage) {
 			select {
 			case <-l:
 				return
-			case time.After(5 * time.Second):
+			default:
+				time.After(5 * time.Second)
 				continue
 			}
 		}
@@ -354,7 +359,7 @@ func (g *Gossiper) acceptComputation(task Tasks.Task) bool {
 	s := task.Size()
 	if g.CurrentCapacity >= s {
 		l := g.Pending.CreateChan(task)
-		messEncode, err := protobuf.Encode(&Messages.GossipMessage{Status: &Messages.StatusMessage{ID: task.ID}})
+		messEncode, err := protobuf.Encode(&Messages.GossipMessage{Status: &Messages.StatusMessage{ID: int32(task.ID)}})
 		if err != nil {
 			fmt.Println("error protobuf")
 		}
@@ -365,7 +370,8 @@ func (g *Gossiper) acceptComputation(task Tasks.Task) bool {
 			go g.compute(task)
 			g.CurrentCapacity -= s
 			return true
-		case time.After(5 * time.Second):
+		default:
+			time.After(5 * time.Second)
 			return false
 		}
 	}
@@ -442,6 +448,6 @@ func (g *Gossiper) merge() {
 	mess := &Messages.RumourMessage{Matrix1: gomatcore.SubMatrix{Mat: res}}
 	unixAddr, _ := net.ResolveUnixAddr("unix", "/tmp/gomat.sock")
 	c, _ := net.DialUnix("unix", nil, unixAddr)
-	rmEncode, _ := protobuf.Encode(&mess)
+	rmEncode, _ := mess.MarshallBinary()
 	c.Write(rmEncode)
 }
