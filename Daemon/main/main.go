@@ -21,7 +21,7 @@ func main() {
 		peerAddrs = make([]string, 0)
 	}
 
-	gossiper, _ := tools.NewGossiper("/tmp/gomat.sock", *gossipPort, "peerster", peerAddrs, *capacity)
+	gossiper, _ := tools.NewGossiper(*gossipPort, "peerster", peerAddrs, *capacity)
 	daemon := Daemon{gossiper: gossiper}
 	daemon.Run()
 }

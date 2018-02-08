@@ -14,6 +14,7 @@ import (
 	"github.com/matei13/gomat/Gossiper/tools/Pending"
 	"github.com/matei13/gomat/Gossiper/tools/Tasks"
 	"github.com/matei13/gomat/matrix"
+	"log"
 )
 
 // Gossiper -- Describe a node of a Gossip network
@@ -49,9 +50,9 @@ const timer = 30
 const buffSize = 65507
 
 // NewGossiper -- Returns a new gossiper structure
-func NewGossiper(sockFile, gossipPort, identifier string, peerAddrs []string, capa int) (*Gossiper, error) {
+func NewGossiper(gossipPort, identifier string, peerAddrs []string, capa int) (*Gossiper, error) {
 	// For UIPort
-	UIAddr, err := net.ResolveUnixAddr("unix", sockFile)
+	UIAddr, err := net.ResolveUnixAddr("unix", "/tmp/gomat.sock")
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +196,7 @@ func (g *Gossiper) acceptUI(conn *net.UnixConn) {
 // Run -- Launch the server
 func (g *Gossiper) Run() {
 	go g.listenUnix(g.UIListener)
-	go g.listenConn(g.gossipConn)
+	g.listenConn(g.gossipConn)
 }
 
 func (g *Gossiper) accept(buffer []byte, addr *net.UDPAddr, nbByte int, isFromClient bool) {
@@ -438,6 +439,8 @@ func (g *Gossiper) splitComputationList(tasks []Tasks.Task) {
 	}
 }
 
+// merge create the global answer from partial answers and
+// sends it back to the client
 func (g *Gossiper) merge() {
 	<-g.Finished
 	l := make([]*gomatcore.SubMatrix, 0)
@@ -447,7 +450,12 @@ func (g *Gossiper) merge() {
 	res := gomatcore.Merge(l, g.Details.rl, g.Details.rc, g.Details.n)
 	mess := &Messages.RumourMessage{Matrix1: gomatcore.SubMatrix{Mat: res}}
 	unixAddr, _ := net.ResolveUnixAddr("unix", "/tmp/gomat.sock")
-	c, _ := net.DialUnix("unix", nil, unixAddr)
+	c, err := net.DialUnix("unix", nil, unixAddr)
+	if err != nil {
+		log.Println("Gossiper: Merge:", err)
+	}
+	defer c.Close()
+
 	rmEncode, _ := mess.MarshallBinary()
 	c.Write(rmEncode)
 }
