@@ -9,6 +9,8 @@ import (
 	"time"
 	"fmt"
 	"github.com/matei13/gomat/Daemon/gomatcore"
+	"github.com/matei13/gomat/Gossiper/tools"
+	"github.com/matei13/gomat/Daemon"
 )
 
 // Daemon reads a request sent by the API and return
@@ -39,6 +41,15 @@ func daemon() {
 	c.Write(responseBuf)
 }
 
+func gomatDaemon(){
+	gossiper, err := tools.NewGossiper("localhost:5000", "peerster", make([]string, 0), 5000)
+	if err != nil {
+		panic(err)
+	}
+	daemon := Daemon.Daemon{Gossiper: gossiper}
+	daemon.Run()
+}
+
 func TestAdd(t *testing.T) {
 	m1 := matrix.New(2, 2, []float64{2, 2, 2, 2})
 	m2 := matrix.New(2, 2, []float64{1, 1, 1, 1})
@@ -51,7 +62,8 @@ func TestAdd(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	go daemon()
+	// Uncommente next line if no gomatDaemon is running
+	go gomatDaemon()
 	time.Sleep(time.Second)
 	os.Exit(m.Run())
 }

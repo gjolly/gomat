@@ -66,14 +66,29 @@ func (rm RumourMessage) Send(conn *net.UDPConn, addr net.UDPAddr) error {
 
 // MarshallBinary encodes a RumorMessage into a []byte
 func (rm RumourMessage) MarshallBinary() ([]byte, error) {
-	b1, err := rm.Matrix1.Mat.MarshalBinary()
-	if err != nil {
-		return nil, err
+
+	var err error
+	var b1 []byte
+
+	if rm.Matrix1.Mat != nil {
+		b1, err = rm.Matrix1.Mat.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		b1 = make([]byte, 0)
 	}
 
-	b2, err := rm.Matrix2.Mat.MarshalBinary()
-	if err != nil {
-		return nil, err
+	var b2 []byte
+
+	if rm.Matrix2.Mat != nil {
+		b2, err = rm.Matrix2.Mat.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		b2 = make([]byte, 0)
 	}
 
 	mb := MessageEncode{
@@ -132,6 +147,9 @@ func (rm *RumourMessage) UnmarshallBinary(buf []byte) error {
 	}
 
 	sm1, sm2, err := me.parseMatrices()
+	if err != nil {
+		return err
+	}
 
 	*rm = RumourMessage{
 		Origin:   me.Origin,

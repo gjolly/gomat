@@ -6,6 +6,7 @@ import (
 	"github.com/matei13/gomat/Gossiper/tools/Messages"
 	"github.com/matei13/gomat/matrix"
 	"github.com/matei13/gomat/Daemon/gomatcore"
+	"github.com/dedis/protobuf"
 )
 
 // askForComputation sends a computation request to the daemon via /tmp/gomat.sock
@@ -36,7 +37,13 @@ func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*ma
 	}
 
 	// Sending the message to the gossiper
-	_, err = c.Write(rmEncode)
+	gm := Messages.GossipMessage{Rumour: rmEncode}
+	gmEncode, err := protobuf.Encode(&gm)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = c.Write(gmEncode)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -51,8 +58,9 @@ func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*ma
 	}
 
 	// Decoding the response
+	protobuf.Decode(response[:nb], &gm)
 	responseMessage := &Messages.RumourMessage{}
-	err = responseMessage.UnmarshallBinary(response[:nb])
+	err = responseMessage.UnmarshallBinary(gm.Rumour)
 	if err != nil {
 		log.Println(err)
 		return nil, err

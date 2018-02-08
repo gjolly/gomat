@@ -139,11 +139,18 @@ func (g Gossiper) sendRumourMessage(message Messages.RumourMessage, addr net.UDP
 	rmEncode, err := message.MarshallBinary()
 	gossipMessage := Messages.GossipMessage{Rumour: rmEncode}
 	messEncode, err := protobuf.Encode(&gossipMessage)
+
 	if err != nil {
 		fmt.Println("error protobuf")
 		return err
 	}
-	if hopLimit > 0 {
+
+	if addr.String() == "0.0.0.0:1234" {
+		UIAddr, _ := net.ResolveUnixAddr("unix", "/tmp/gomat.sock")
+		conn, _ := net.DialUnix("unix", nil, UIAddr)
+		conn.Write(messEncode)
+		conn.Close()
+	} else if hopLimit > 0 {
 		g.gossipConn.WriteToUDP(messEncode, &addr)
 	}
 	return nil
@@ -188,7 +195,8 @@ func (g *Gossiper) acceptUI(conn *net.UnixConn) {
 		bufferMess = make([]byte, buffSize)
 		nbBytes, _, err = conn.ReadFromUnix(bufferMess)
 		if err == nil {
-			go g.accept(bufferMess, nil, nbBytes, true)
+			addr, _ := net.ResolveUDPAddr("udp4", "0.0.0.0:1234")
+			go g.accept(bufferMess, addr, nbBytes, true)
 		}
 	}
 }
@@ -202,9 +210,13 @@ func (g *Gossiper) Run() {
 func (g *Gossiper) accept(buffer []byte, addr *net.UDPAddr, nbByte int, isFromClient bool) {
 	mess := &Messages.GossipMessage{}
 	protobuf.Decode(buffer, mess)
-	if mess.Rumour != nil {
+	if mess.Rumour != nil && len(mess.Rumour) > 0 {
 		rm := &Messages.RumourMessage{}
-		rm.UnmarshallBinary(mess.Rumour)
+		err := rm.UnmarshallBinary(mess.Rumour)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		g.AcceptRumourMessage(*rm, *addr, isFromClient)
 	} else if mess.Status != nil {
 		g.acceptStatusMessage(*mess.Status, addr)

@@ -65,5 +65,8 @@ func (g *Gossiper) RunServer(port string) {
 	r.HandleFunc("/getData", g.getDataHandler)
 	r.HandleFunc("/setCapacity", g.setCapacityHandler)
 	r.HandleFunc("/addPeer", g.addPeerHandler)
-	http.ListenAndServe(":"+port, r)
+	err := http.ListenAndServe(":"+port, r)
+	if err != nil {
+		panic(err)
+	}
 }

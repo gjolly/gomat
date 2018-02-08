@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/matei13/gomat/Gossiper/tools"
 	"strings"
+	"github.com/matei13/gomat/Daemon"
 )
 
 func main() {
@@ -25,6 +26,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	daemon := Daemon{gossiper: gossiper}
+	daemon := Daemon.Daemon{Gossiper: gossiper}
 	daemon.Run()
 }
