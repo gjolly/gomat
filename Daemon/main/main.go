@@ -21,7 +21,10 @@ func main() {
 		peerAddrs = make([]string, 0)
 	}
 
-	gossiper, _ := tools.NewGossiper(*gossipPort, "peerster", peerAddrs, *capacity)
+	gossiper, err := tools.NewGossiper(*gossipPort, "peerster", peerAddrs, *capacity)
+	if err != nil {
+		panic(err)
+	}
 	daemon := Daemon{gossiper: gossiper}
 	daemon.Run()
 }

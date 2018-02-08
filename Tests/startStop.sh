@@ -5,7 +5,8 @@ targetDir="Daemon/main"
 targetName="gomatDaemon"
 
 function clean {
-    rm -R ../$buildDir
+    # rm -R ../$buildDir
+    rm /tmp/gomat.sock
 }
 
 function build {
@@ -24,4 +25,4 @@ function run {
 
 build
 run
-# clean
+clean
