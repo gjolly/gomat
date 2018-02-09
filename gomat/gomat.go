@@ -27,7 +27,9 @@ func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*ma
 	defer c.Close()
 
 	// Creating the message
-	rm := Messages.RumourMessage{Matrix1: gomatcore.SubMatrix{Mat: m1}, Matrix2: gomatcore.SubMatrix{Mat: m2}, Op: operation}
+	m1Row, m1Col := m1.Dims()
+	m2Row, m2Col := m2.Dims()
+	rm := Messages.RumourMessage{Matrix1: gomatcore.SubMatrix{Mat: m1, Col: uint32(m1Col), Row: uint32(m1Row)}, Matrix2: gomatcore.SubMatrix{Mat: m2, Col: uint32(m2Col), Row: uint32(m2Row)}, Op: operation}
 
 	// Encoding the message
 	rmEncode, err := rm.MarshallBinary()
@@ -58,11 +60,16 @@ func askForComputation(m1, m2 *matrix.Matrix, operation Messages.Operation) (*ma
 	}
 
 	// Decoding the response
-	protobuf.Decode(response[:nb], &gm)
+	err = protobuf.Decode(response[:nb], &gm)
+	if err != nil {
+		log.Println("Decodage response error: ", err)
+		return nil, err
+	}
 	responseMessage := &Messages.RumourMessage{}
+
 	err = responseMessage.UnmarshallBinary(gm.Rumour)
 	if err != nil {
-		log.Println(err)
+		log.Println("Decodage matrix response:", err)
 		return nil, err
 	}
 

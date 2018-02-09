@@ -1,6 +1,8 @@
 package Daemon
 
-import "github.com/matei13/gomat/Gossiper/tools"
+import (
+	"github.com/matei13/gomat/Gossiper/tools"
+)
 
 type Daemon struct {
 	Gossiper *tools.Gossiper

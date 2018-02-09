@@ -15,6 +15,7 @@ import (
 	"github.com/matei13/gomat/Gossiper/tools/Tasks"
 	"github.com/matei13/gomat/matrix"
 	"log"
+	"os"
 )
 
 // Gossiper -- Describe a node of a Gossip network
@@ -35,6 +36,7 @@ type Gossiper struct {
 	DoneTasks       map[uint32]gomatcore.SubMatrix //finished tasks
 	FoundComputer   map[uint32]chan bool           //indicates if we have found someone to do the computations for subtask i
 	Details         Details
+	UnixConn        *net.UnixConn
 }
 
 type Details struct {
@@ -51,6 +53,7 @@ const buffSize = 65507
 
 // NewGossiper -- Returns a new gossiper structure
 func NewGossiper(gossipPort, identifier string, peerAddrs []string, capa int) (*Gossiper, error) {
+	os.Remove("/tmp/gomat.sock")
 	// For UIPort
 	UIAddr, err := net.ResolveUnixAddr("unix", "/tmp/gomat.sock")
 	if err != nil {
@@ -182,8 +185,12 @@ func (g *Gossiper) listenConn(conn *net.UDPConn) {
 
 func (g *Gossiper) listenUnix(listener *net.UnixListener) {
 	for {
-		unixConn, _ := listener.AcceptUnix()
-		g.acceptUI(unixConn)
+		unixConn, err := listener.AcceptUnix()
+		if err != nil {
+			log.Println("ListenUnix:", err)
+		}
+		g.UnixConn = unixConn
+		go g.acceptUI(unixConn)
 	}
 }
 
@@ -196,7 +203,7 @@ func (g *Gossiper) acceptUI(conn *net.UnixConn) {
 		nbBytes, _, err = conn.ReadFromUnix(bufferMess)
 		if err == nil {
 			addr, _ := net.ResolveUDPAddr("udp4", "0.0.0.0:1234")
-			go g.accept(bufferMess, addr, nbBytes, true)
+			g.accept(bufferMess, addr, nbBytes, true)
 		}
 	}
 }
@@ -229,7 +236,8 @@ func (g *Gossiper) AcceptRumourMessage(mess Messages.RumourMessage, addr net.UDP
 		g.DoneTasks = make(map[uint32]gomatcore.SubMatrix)
 		g.FoundComputer = make(map[uint32]chan bool)
 		mess.Origin = g.name
-		g.splitComputation(*mess.Matrix1.Mat, *mess.Matrix2.Mat, mess.Op)
+		// g.splitComputation(*mess.Matrix1.Mat, *mess.Matrix2.Mat, mess.Op)
+		g.abcd(mess.Matrix1, mess.Matrix2, mess.Op)
 		go g.merge()
 	} else {
 		if &mess.Matrix2 != nil {
@@ -316,6 +324,30 @@ func (g *Gossiper) keepSending(message Messages.RumourMessage) {
 			}
 		}
 	}
+}
+
+func (g *Gossiper) abcd(mat1, mat2 gomatcore.SubMatrix, op Messages.Operation) {
+	ansToSend := Messages.RumourMessage{}
+	switch op {
+	case Messages.Sum:
+		ansToSend.Matrix1 = gomatcore.SubMatrix{Mat: matrix.Add(mat1.Mat, mat2.Mat), Row: mat1.Row, Col: mat2.Col}
+	case Messages.Mul:
+		ansToSend.Matrix1 = gomatcore.SubMatrix{Mat: matrix.Sub(mat1.Mat, mat2.Mat), Row: mat1.Row, Col: mat2.Col}
+	case Messages.Sub:
+		ansToSend.Matrix1 = gomatcore.SubMatrix{Mat: matrix.Mul(mat1.Mat, mat2.Mat), Row: mat1.Row, Col: mat2.Col}
+	}
+	rmEncode, err := ansToSend.MarshallBinary()
+	if err != nil {
+		log.Println("Marshall: ", rmEncode)
+	}
+
+	gm := Messages.GossipMessage{Rumour: rmEncode}
+	gmEncode, err := protobuf.Encode(&gm)
+	if err != nil {
+		log.Println("Protobuf: ", rmEncode)
+	}
+	g.UnixConn.Write(gmEncode)
+	g.UnixConn.Close()
 }
 
 func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operation) {
@@ -455,6 +487,7 @@ func (g *Gossiper) splitComputationList(tasks []Tasks.Task) {
 // sends it back to the client
 func (g *Gossiper) merge() {
 	<-g.Finished
+	fmt.Println("After finished")
 	l := make([]*gomatcore.SubMatrix, 0)
 	for _, m := range g.DoneTasks {
 		l = append(l, &m)

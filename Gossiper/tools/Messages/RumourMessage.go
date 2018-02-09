@@ -119,17 +119,11 @@ func (me *MessageEncode) parseMatrices() (*gomatcore.SubMatrix, *gomatcore.SubMa
 	mat1 := matrix.Matrix{}
 	mat2 := matrix.Matrix{}
 
-	err := mat1.UnmarshalBinary(me.Matrix1)
-	if err != nil {
-		return nil, nil, err
-	}
+	mat1.UnmarshalBinary(me.Matrix1)
 
 	sm1 := gomatcore.SubMatrix{Mat: &mat1, Row: me.M1Col, Col: me.M1Row}
 
-	err = mat2.UnmarshalBinary(me.Matrix2)
-	if err != nil {
-		return nil, nil, err
-	}
+	mat2.UnmarshalBinary(me.Matrix2)
 
 	sm2 := gomatcore.SubMatrix{Mat: &mat2, Row: me.M2Col, Col: me.M2Row}
 
