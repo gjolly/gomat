@@ -7,6 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"log"
+	"os"
+
 	"github.com/dedis/protobuf"
 	"github.com/matei13/gomat/Daemon/gomatcore"
 	"github.com/matei13/gomat/Gossiper/tools/Messages"
@@ -14,8 +17,6 @@ import (
 	"github.com/matei13/gomat/Gossiper/tools/Pending"
 	"github.com/matei13/gomat/Gossiper/tools/Tasks"
 	"github.com/matei13/gomat/matrix"
-	"log"
-	"os"
 )
 
 // Gossiper -- Describe a node of a Gossip network
@@ -331,9 +332,9 @@ func (g *Gossiper) abcd(mat1, mat2 gomatcore.SubMatrix, op Messages.Operation) {
 	switch op {
 	case Messages.Sum:
 		ansToSend.Matrix1 = gomatcore.SubMatrix{Mat: matrix.Add(mat1.Mat, mat2.Mat), Row: mat1.Row, Col: mat2.Col}
-	case Messages.Mul:
-		ansToSend.Matrix1 = gomatcore.SubMatrix{Mat: matrix.Sub(mat1.Mat, mat2.Mat), Row: mat1.Row, Col: mat2.Col}
 	case Messages.Sub:
+		ansToSend.Matrix1 = gomatcore.SubMatrix{Mat: matrix.Sub(mat1.Mat, mat2.Mat), Row: mat1.Row, Col: mat2.Col}
+	case Messages.Mul:
 		ansToSend.Matrix1 = gomatcore.SubMatrix{Mat: matrix.Mul(mat1.Mat, mat2.Mat), Row: mat1.Row, Col: mat2.Col}
 	}
 	rmEncode, err := ansToSend.MarshallBinary()
@@ -356,7 +357,7 @@ func (g *Gossiper) splitComputation(mat1, mat2 matrix.Matrix, op Messages.Operat
 	sMat2 := gomatcore.Split(&mat2, n)
 	rl, _ := mat1.Dims()
 	_, rc := mat2.Dims()
-	g.Details = Details{rl: rl, rc: rc, n: n,}
+	g.Details = Details{rl: rl, rc: rc, n: n}
 	id := uint32(0)
 	switch op {
 	case Messages.Sum, Messages.Sub:
